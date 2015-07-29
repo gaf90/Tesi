@@ -1,0 +1,252 @@
+\hypertarget{classUSARMessage}{
+\section{USARMessage Class Reference}
+\label{classUSARMessage}\index{USARMessage@{USARMessage}}
+}
+
+
+\hyperlink{classMessage}{Message} representing data sent to and from USARSim.  
+
+
+
+
+{\ttfamily \#include $<$usarmessage.h$>$}
+
+Inheritance diagram for USARMessage:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classUSARMessage}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classUSARMessage_a9e9a5ff3fa214118795f8ff497d405cd}{USARMessage} ()
+\item 
+\hyperlink{classUSARMessage_a15feacf7b822e859023b7951104d2c86}{USARMessage} (const QString \&line)
+\item 
+\hyperlink{classUSARMessage_a773cca2f8b7144ee91607f9a06de8b87}{USARMessage} (const \hyperlink{classUSARMessage}{USARMessage} \&message)
+\item 
+virtual \hyperlink{classUSARMessage_ae1b97a8729759a96269a7a6094dc16d1}{$\sim$USARMessage} ()
+\item 
+\hyperlink{classUSARMessage_a37cb1728fb9fba59a8d46376ef4ff06f}{operator QString} () const 
+\item 
+void \hyperlink{classUSARMessage_a758f2f40962494e9d7849b3f9a480599}{setType} (const QString \&type)
+\item 
+const QString \& \hyperlink{classUSARMessage_ab71d4e8b5cd81b7b6567936fb4614aaf}{getType} () const 
+\item 
+const QString \& \hyperlink{classUSARMessage_a75f24312fd0d5ae95c2439d31e11d9f1}{operator\mbox{[}$\,$\mbox{]}} (const QString \&key) const 
+\item 
+QString \& \hyperlink{classUSARMessage_af7df32828ebbac479f34d769575e4ea1}{operator\mbox{[}$\,$\mbox{]}} (const QString \&key)
+\item 
+void \hyperlink{classUSARMessage_af98c3d21afaba3456bd8eab56d92de1a}{insert} (const QString \&key, const QString \&value)
+\item 
+bool \hyperlink{classUSARMessage_aa86ec4c02f60f20d65db97c062c601b2}{contains} (const QString \&key) const 
+\item 
+const QList$<$ QString $>$ \& \hyperlink{classUSARMessage_a449ec98406459bad6ed7fc0e58e105f8}{keys} () const 
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{classMessage}{Message} representing data sent to and from USARSim. 
+
+The \hyperlink{classUSARMessage}{USARMessage} class represents a message aimed towards, or signalled by \hyperlink{classUSARController}{USARController}. The class is effectively a hash table containing key-\/value pairs and an additional string representing the type of the message (e.g. INFO, SEN, STA, DRIVE, ...). When parsing a message the order of the parameters is preserved; similarly when constructing a new message with the provided methods the ordering of the parameters is determined by the order in which the key/value pairs were inserted
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classUSARController}{USARController} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classUSARMessage_a9e9a5ff3fa214118795f8ff497d405cd}{
+\index{USARMessage@{USARMessage}!USARMessage@{USARMessage}}
+\index{USARMessage@{USARMessage}!USARMessage@{USARMessage}}
+\subsubsection[{USARMessage}]{\setlength{\rightskip}{0pt plus 5cm}USARMessage::USARMessage (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)}}
+\label{classUSARMessage_a9e9a5ff3fa214118795f8ff497d405cd}
+Initialises an empty \hyperlink{classUSARMessage}{USARMessage} \hypertarget{classUSARMessage_a15feacf7b822e859023b7951104d2c86}{
+\index{USARMessage@{USARMessage}!USARMessage@{USARMessage}}
+\index{USARMessage@{USARMessage}!USARMessage@{USARMessage}}
+\subsubsection[{USARMessage}]{\setlength{\rightskip}{0pt plus 5cm}USARMessage::USARMessage (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{line}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit\mbox{]}}}}
+\label{classUSARMessage_a15feacf7b822e859023b7951104d2c86}
+Initialises an \hyperlink{classUSARMessage}{USARMessage} from a string serialised representation of a USARSim message, the input is parsed and the type and key-\/value pairs are filled
+
+
+\begin{DoxyParams}{Parameters}
+{\em line} & The input string serialised USARSim message \\
+\hline
+\end{DoxyParams}
+\hypertarget{classUSARMessage_a773cca2f8b7144ee91607f9a06de8b87}{
+\index{USARMessage@{USARMessage}!USARMessage@{USARMessage}}
+\index{USARMessage@{USARMessage}!USARMessage@{USARMessage}}
+\subsubsection[{USARMessage}]{\setlength{\rightskip}{0pt plus 5cm}USARMessage::USARMessage (
+\begin{DoxyParamCaption}
+\item[{const {\bf USARMessage} \&}]{message}
+\end{DoxyParamCaption}
+)}}
+\label{classUSARMessage_a773cca2f8b7144ee91607f9a06de8b87}
+Initialises an \hyperlink{classUSARMessage}{USARMessage} from another existing one
+
+
+\begin{DoxyParams}{Parameters}
+{\em message} & The \hyperlink{classUSARMessage}{USARMessage} to clone \\
+\hline
+\end{DoxyParams}
+\hypertarget{classUSARMessage_ae1b97a8729759a96269a7a6094dc16d1}{
+\index{USARMessage@{USARMessage}!$\sim$USARMessage@{$\sim$USARMessage}}
+\index{$\sim$USARMessage@{$\sim$USARMessage}!USARMessage@{USARMessage}}
+\subsubsection[{$\sim$USARMessage}]{\setlength{\rightskip}{0pt plus 5cm}USARMessage::$\sim$USARMessage (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classUSARMessage_ae1b97a8729759a96269a7a6094dc16d1}
+Destroys the \hyperlink{classUSARMessage}{USARMessage} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classUSARMessage_aa86ec4c02f60f20d65db97c062c601b2}{
+\index{USARMessage@{USARMessage}!contains@{contains}}
+\index{contains@{contains}!USARMessage@{USARMessage}}
+\subsubsection[{contains}]{\setlength{\rightskip}{0pt plus 5cm}bool USARMessage::contains (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{key}
+\end{DoxyParamCaption}
+) const}}
+\label{classUSARMessage_aa86ec4c02f60f20d65db97c062c601b2}
+Checks whether a parameter key exists in the message or not
+
+
+\begin{DoxyParams}{Parameters}
+{\em key} & Input parameter key \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+true if key exists in the message, false otherwise 
+\end{DoxyReturn}
+\hypertarget{classUSARMessage_ab71d4e8b5cd81b7b6567936fb4614aaf}{
+\index{USARMessage@{USARMessage}!getType@{getType}}
+\index{getType@{getType}!USARMessage@{USARMessage}}
+\subsubsection[{getType}]{\setlength{\rightskip}{0pt plus 5cm}const QString \& USARMessage::getType (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classUSARMessage_ab71d4e8b5cd81b7b6567936fb4614aaf}
+Retrieves the message type
+
+\begin{DoxyReturn}{Returns}
+\hyperlink{classMessage}{Message} type 
+\end{DoxyReturn}
+\hypertarget{classUSARMessage_af98c3d21afaba3456bd8eab56d92de1a}{
+\index{USARMessage@{USARMessage}!insert@{insert}}
+\index{insert@{insert}!USARMessage@{USARMessage}}
+\subsubsection[{insert}]{\setlength{\rightskip}{0pt plus 5cm}void USARMessage::insert (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{key, }
+\item[{const QString \&}]{value}
+\end{DoxyParamCaption}
+)}}
+\label{classUSARMessage_af98c3d21afaba3456bd8eab56d92de1a}
+Adds a new key/value pair to the message after the existing ones (ordered)
+
+
+\begin{DoxyParams}{Parameters}
+{\em key} & Input parameter key \\
+\hline
+{\em value} & Value associated to the key \\
+\hline
+\end{DoxyParams}
+\hypertarget{classUSARMessage_a449ec98406459bad6ed7fc0e58e105f8}{
+\index{USARMessage@{USARMessage}!keys@{keys}}
+\index{keys@{keys}!USARMessage@{USARMessage}}
+\subsubsection[{keys}]{\setlength{\rightskip}{0pt plus 5cm}const QList$<$ QString $>$ \& USARMessage::keys (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classUSARMessage_a449ec98406459bad6ed7fc0e58e105f8}
+Provides const reference to the list of parameter keys in the message, sorted in order of insertion (or parsing)
+
+\begin{DoxyReturn}{Returns}
+Ordered parameter keys 
+\end{DoxyReturn}
+\hypertarget{classUSARMessage_a37cb1728fb9fba59a8d46376ef4ff06f}{
+\index{USARMessage@{USARMessage}!operator QString@{operator QString}}
+\index{operator QString@{operator QString}!USARMessage@{USARMessage}}
+\subsubsection[{operator QString}]{\setlength{\rightskip}{0pt plus 5cm}USARMessage::operator QString (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classUSARMessage_a37cb1728fb9fba59a8d46376ef4ff06f}
+Serialises the \hyperlink{classUSARMessage}{USARMessage} into a valid string which adheres to the USARSim standard
+
+\begin{DoxyReturn}{Returns}
+The serialised string 
+\end{DoxyReturn}
+\hypertarget{classUSARMessage_a75f24312fd0d5ae95c2439d31e11d9f1}{
+\index{USARMessage@{USARMessage}!operator\mbox{[}\mbox{]}@{operator[]}}
+\index{operator\mbox{[}\mbox{]}@{operator[]}!USARMessage@{USARMessage}}
+\subsubsection[{operator[]}]{\setlength{\rightskip}{0pt plus 5cm}const QString \& USARMessage::operator\mbox{[}$\,$\mbox{]} (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{key}
+\end{DoxyParamCaption}
+) const}}
+\label{classUSARMessage_a75f24312fd0d5ae95c2439d31e11d9f1}
+Returns a constant reference to the value of the parameter specified by key
+
+
+\begin{DoxyParams}{Parameters}
+{\em key} & Input parameter key \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Constant reference to value indexed by key 
+\end{DoxyReturn}
+\hypertarget{classUSARMessage_af7df32828ebbac479f34d769575e4ea1}{
+\index{USARMessage@{USARMessage}!operator\mbox{[}\mbox{]}@{operator[]}}
+\index{operator\mbox{[}\mbox{]}@{operator[]}!USARMessage@{USARMessage}}
+\subsubsection[{operator[]}]{\setlength{\rightskip}{0pt plus 5cm}QString \& USARMessage::operator\mbox{[}$\,$\mbox{]} (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{key}
+\end{DoxyParamCaption}
+)}}
+\label{classUSARMessage_af7df32828ebbac479f34d769575e4ea1}
+Returns a modifiable reference to the value of the parameter specified by key. If the key does not exist a new entry is created
+
+
+\begin{DoxyParams}{Parameters}
+{\em key} & Input parameter key \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+Modifiable reference to value indexed by key 
+\end{DoxyReturn}
+\hypertarget{classUSARMessage_a758f2f40962494e9d7849b3f9a480599}{
+\index{USARMessage@{USARMessage}!setType@{setType}}
+\index{setType@{setType}!USARMessage@{USARMessage}}
+\subsubsection[{setType}]{\setlength{\rightskip}{0pt plus 5cm}void USARMessage::setType (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{type}
+\end{DoxyParamCaption}
+)}}
+\label{classUSARMessage_a758f2f40962494e9d7849b3f9a480599}
+Sets the message type
+
+
+\begin{DoxyParams}{Parameters}
+{\em type} & \hyperlink{classMessage}{Message} type \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+data/\hyperlink{usarmessage_8h}{usarmessage.h}\item 
+data/\hyperlink{usarmessage_8cpp}{usarmessage.cpp}\end{DoxyCompactItemize}

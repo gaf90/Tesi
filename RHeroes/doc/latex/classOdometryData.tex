@@ -1,0 +1,87 @@
+\hypertarget{classOdometryData}{
+\section{OdometryData Class Reference}
+\label{classOdometryData}\index{OdometryData@{OdometryData}}
+}
+
+
+Odometric data message.  
+
+
+
+
+{\ttfamily \#include $<$odometrydata.h$>$}
+
+Inheritance diagram for OdometryData:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classOdometryData}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classOdometryData_a90766d087ca7e268ef563397f87d4f20}{OdometryData} (const \hyperlink{classPose}{Pose} \&pose)
+\item 
+virtual \hyperlink{classOdometryData_a0f76667e8bc97dfa401b25269233b6e8}{$\sim$OdometryData} ()
+\item 
+const \hyperlink{classPose}{Pose} \& \hyperlink{classOdometryData_ae8e1a74393a3608595a35ca14bf3eaaa}{getPose} () const 
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Odometric data message. 
+
+This class represents odometric data readings, signalled by \hyperlink{classOdometrySensor}{OdometrySensor}
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classOdometrySensor}{OdometrySensor} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classOdometryData_a90766d087ca7e268ef563397f87d4f20}{
+\index{OdometryData@{OdometryData}!OdometryData@{OdometryData}}
+\index{OdometryData@{OdometryData}!OdometryData@{OdometryData}}
+\subsubsection[{OdometryData}]{\setlength{\rightskip}{0pt plus 5cm}OdometryData::OdometryData (
+\begin{DoxyParamCaption}
+\item[{const {\bf Pose} \&}]{pose}
+\end{DoxyParamCaption}
+)}}
+\label{classOdometryData_a90766d087ca7e268ef563397f87d4f20}
+Constructs a new \hyperlink{classOdometryData}{OdometryData} message
+
+
+\begin{DoxyParams}{Parameters}
+{\em pose} & The pose as reported by the odometric sensor \\
+\hline
+\end{DoxyParams}
+\hypertarget{classOdometryData_a0f76667e8bc97dfa401b25269233b6e8}{
+\index{OdometryData@{OdometryData}!$\sim$OdometryData@{$\sim$OdometryData}}
+\index{$\sim$OdometryData@{$\sim$OdometryData}!OdometryData@{OdometryData}}
+\subsubsection[{$\sim$OdometryData}]{\setlength{\rightskip}{0pt plus 5cm}OdometryData::$\sim$OdometryData (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classOdometryData_a0f76667e8bc97dfa401b25269233b6e8}
+Destroys the \hyperlink{classOdometryData}{OdometryData} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classOdometryData_ae8e1a74393a3608595a35ca14bf3eaaa}{
+\index{OdometryData@{OdometryData}!getPose@{getPose}}
+\index{getPose@{getPose}!OdometryData@{OdometryData}}
+\subsubsection[{getPose}]{\setlength{\rightskip}{0pt plus 5cm}const {\bf Pose} \& OdometryData::getPose (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classOdometryData_ae8e1a74393a3608595a35ca14bf3eaaa}
+\begin{DoxyReturn}{Returns}
+The pose as reported by the odometric sensor 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+data/\hyperlink{odometrydata_8h}{odometrydata.h}\item 
+data/\hyperlink{odometrydata_8cpp}{odometrydata.cpp}\end{DoxyCompactItemize}

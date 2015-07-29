@@ -1,0 +1,119 @@
+\hypertarget{classSensor}{
+\section{Sensor Class Reference}
+\label{classSensor}\index{Sensor@{Sensor}}
+}
+
+
+Generic sensor interface.  
+
+
+
+
+{\ttfamily \#include $<$sensor.h$>$}
+
+Inheritance diagram for Sensor:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classSensor}
+\end{center}
+\end{figure}
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{onMessageReceived} (const \hyperlink{classMessage}{Message} \&message)=0
+\end{DoxyCompactItemize}
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classSensor_a776d00dfa555b5a0b1b937c84d767bf4}{sensorData} (const \hyperlink{classMessage}{Message} \&data)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual \hyperlink{classSensor_aee8c70e7ef05ce65e7ee33686b5d7db2}{$\sim$Sensor} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classSensor_a7106654826948a6a6d76eeb37693657d}{Sensor} (QObject $\ast$parent=0)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Generic sensor interface. 
+
+The \hyperlink{classSensor}{Sensor} virtual class defines the common interface that must be implemented by middleware classes that signal sensor data to the main application.
+
+The particular sensorial data emitted (\hyperlink{classMessage}{Message}) is dependent on the \hyperlink{classSensor}{Sensor} implementation, hence additional information should be sought in the relative subclass documentation 
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classSensor_a7106654826948a6a6d76eeb37693657d}{
+\index{Sensor@{Sensor}!Sensor@{Sensor}}
+\index{Sensor@{Sensor}!Sensor@{Sensor}}
+\subsubsection[{Sensor}]{\setlength{\rightskip}{0pt plus 5cm}Sensor::Sensor (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classSensor_a7106654826948a6a6d76eeb37693657d}
+Constructs a new \hyperlink{classSensor}{Sensor}
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classSensor_aee8c70e7ef05ce65e7ee33686b5d7db2}{
+\index{Sensor@{Sensor}!$\sim$Sensor@{$\sim$Sensor}}
+\index{$\sim$Sensor@{$\sim$Sensor}!Sensor@{Sensor}}
+\subsubsection[{$\sim$Sensor}]{\setlength{\rightskip}{0pt plus 5cm}Sensor::$\sim$Sensor (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classSensor_aee8c70e7ef05ce65e7ee33686b5d7db2}
+Destroys the \hyperlink{classSensor}{Sensor} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{
+\index{Sensor@{Sensor}!onMessageReceived@{onMessageReceived}}
+\index{onMessageReceived@{onMessageReceived}!Sensor@{Sensor}}
+\subsubsection[{onMessageReceived}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Sensor::onMessageReceived (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{message}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}pure virtual, slot\mbox{]}}}}
+\label{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}
+This slot must be implemented by subclasses in order to receive messages from the underlying connection controller. In case the message is of interest it should be parsed and an appropriate sensorData signal should be emitted
+
+
+\begin{DoxyParams}{Parameters}
+{\em message} & The message received by the underlying controller \\
+\hline
+\end{DoxyParams}
+
+
+Implemented in \hyperlink{classCameraSensor_a7ac39be83c8f461b0d6e057d8b2d4011}{CameraSensor}, \hyperlink{classLaserSensor_aa7b966f0849ce5c43920480abcae50f0}{LaserSensor}, and \hyperlink{classOdometrySensor_a31000cc77d015a52c4b9d43996ed6ae8}{OdometrySensor}.
+
+\hypertarget{classSensor_a776d00dfa555b5a0b1b937c84d767bf4}{
+\index{Sensor@{Sensor}!sensorData@{sensorData}}
+\index{sensorData@{sensorData}!Sensor@{Sensor}}
+\subsubsection[{sensorData}]{\setlength{\rightskip}{0pt plus 5cm}void Sensor::sensorData (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{data}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classSensor_a776d00dfa555b5a0b1b937c84d767bf4}
+This signal is emitted whenever new sensor data is available. Refer to the particular \hyperlink{classSensor}{Sensor} implementation for information about the actual type of \hyperlink{classMessage}{Message} passed
+
+
+\begin{DoxyParams}{Parameters}
+{\em data} & The sensor data to communicate \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+middleware/sensor/\hyperlink{sensor_8h}{sensor.h}\item 
+middleware/sensor/\hyperlink{sensor_8cpp}{sensor.cpp}\end{DoxyCompactItemize}

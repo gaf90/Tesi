@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="neunet.net">invKin_double.net</file>
+    </qresource>
+</RCC>

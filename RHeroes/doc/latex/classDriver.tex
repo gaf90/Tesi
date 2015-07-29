@@ -1,0 +1,111 @@
+\hypertarget{classDriver}{
+\section{Driver Class Reference}
+\label{classDriver}\index{Driver@{Driver}}
+}
+
+
+Generic driver interface.  
+
+
+
+
+{\ttfamily \#include $<$driver.h$>$}
+
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classDriver_af85a17da0276d26134cf02fb58063c38}{onDriverMessage} (const \hyperlink{classMessage}{Message} \&message)=0
+\end{DoxyCompactItemize}
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classDriver_ae74285ffd8852815b1758950ccba7e96}{lowLevelCommand} (const \hyperlink{classMessage}{Message} \&data)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual \hyperlink{classDriver_ac7645eea8d3ce2bc39ddbda5e840297a}{$\sim$Driver} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classDriver_ad74d5b3e9b8f25e10f81d145a5fb316b}{Driver} (QObject $\ast$parent=0)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Generic driver interface. 
+
+The \hyperlink{classSensor}{Sensor} virtual class defines the common interface that must be implemented by middleware classes that communicate commands to an underlying controller.
+
+The particular command (\hyperlink{classMessage}{Message}) expected is dependent on the \hyperlink{classDriver}{Driver} implementation, hence additional information should be sought in the relative subclass documentation 
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classDriver_ad74d5b3e9b8f25e10f81d145a5fb316b}{
+\index{Driver@{Driver}!Driver@{Driver}}
+\index{Driver@{Driver}!Driver@{Driver}}
+\subsubsection[{Driver}]{\setlength{\rightskip}{0pt plus 5cm}Driver::Driver (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classDriver_ad74d5b3e9b8f25e10f81d145a5fb316b}
+Constructs a new \hyperlink{classDriver}{Driver}
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classDriver_ac7645eea8d3ce2bc39ddbda5e840297a}{
+\index{Driver@{Driver}!$\sim$Driver@{$\sim$Driver}}
+\index{$\sim$Driver@{$\sim$Driver}!Driver@{Driver}}
+\subsubsection[{$\sim$Driver}]{\setlength{\rightskip}{0pt plus 5cm}Driver::$\sim$Driver (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classDriver_ac7645eea8d3ce2bc39ddbda5e840297a}
+Destroys the \hyperlink{classDriver}{Driver} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classDriver_ae74285ffd8852815b1758950ccba7e96}{
+\index{Driver@{Driver}!lowLevelCommand@{lowLevelCommand}}
+\index{lowLevelCommand@{lowLevelCommand}!Driver@{Driver}}
+\subsubsection[{lowLevelCommand}]{\setlength{\rightskip}{0pt plus 5cm}void Driver::lowLevelCommand (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{data}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classDriver_ae74285ffd8852815b1758950ccba7e96}
+This signal is emitted whenever the driver deems necessary to communicate a command to the underlying controller.
+
+
+\begin{DoxyParams}{Parameters}
+{\em data} & The command message aimed at the underlying controller \\
+\hline
+\end{DoxyParams}
+\hypertarget{classDriver_af85a17da0276d26134cf02fb58063c38}{
+\index{Driver@{Driver}!onDriverMessage@{onDriverMessage}}
+\index{onDriverMessage@{onDriverMessage}!Driver@{Driver}}
+\subsubsection[{onDriverMessage}]{\setlength{\rightskip}{0pt plus 5cm}virtual void Driver::onDriverMessage (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{message}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}pure virtual, slot\mbox{]}}}}
+\label{classDriver_af85a17da0276d26134cf02fb58063c38}
+This slot must be implemented by subclasses in order to receive messages from the driver user (i.e. \hyperlink{classRobotController}{RobotController}). In case the message is of interest it should be interpreted and an appropriate lowLevelCommand signal should be emitted for the underlying controller.
+
+Refer to the particular \hyperlink{classDriver}{Driver} implementation for information about the actual type of \hyperlink{classMessage}{Message} expected
+
+
+\begin{DoxyParams}{Parameters}
+{\em message} & The message sent by the driver user \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+middleware/driver/\hyperlink{driver_8h}{driver.h}\item 
+middleware/driver/\hyperlink{driver_8cpp}{driver.cpp}\end{DoxyCompactItemize}

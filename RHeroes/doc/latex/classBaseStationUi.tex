@@ -1,0 +1,132 @@
+\hypertarget{classBaseStationUi}{
+\section{BaseStationUi Class Reference}
+\label{classBaseStationUi}\index{BaseStationUi@{BaseStationUi}}
+}
+
+
+{\ttfamily \#include $<$basestationui.h$>$}
+
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classBaseStationUi_a58c791391c932937050b7e9ea73c064d}{signalMessage} (const \hyperlink{classMessage}{Message} \&msg)
+\item 
+void \hyperlink{classBaseStationUi_a591be9134fb7673ab8ba1c30e51eade2}{signalUPISConnect} (const QString \&address, const quint16 port)
+\item 
+void \hyperlink{classBaseStationUi_a1a62c9bc9bc446bba7b3bbaae36d47d4}{signalUSARConnect} (const QString \&address, const quint16 port)
+\item 
+void \hyperlink{classBaseStationUi_aa840d4d0187d14fce73a192dd2f81cef}{signalSpawnRobot} (const QString \&location)
+\item 
+void \hyperlink{classBaseStationUi_a60918c9ab8ff9714af4a45067349a4b7}{signalDisconnect} ()
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classBaseStationUi_a88774be8385c526e0f928a726470c2ca}{BaseStationUi} (QWidget $\ast$parent=0)
+\item 
+virtual \hyperlink{classBaseStationUi_ad9e4d5079883b96a1a12d0f9db529360}{$\sim$BaseStationUi} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+This class represents the user interface for the robots' operator. It allows to create new robots and it collects the shared information among them. 
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classBaseStationUi_a88774be8385c526e0f928a726470c2ca}{
+\index{BaseStationUi@{BaseStationUi}!BaseStationUi@{BaseStationUi}}
+\index{BaseStationUi@{BaseStationUi}!BaseStationUi@{BaseStationUi}}
+\subsubsection[{BaseStationUi}]{\setlength{\rightskip}{0pt plus 5cm}BaseStationUi::BaseStationUi (
+\begin{DoxyParamCaption}
+\item[{QWidget $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit\mbox{]}}}}
+\label{classBaseStationUi_a88774be8385c526e0f928a726470c2ca}
+Constructor for the \hyperlink{classBaseStation}{BaseStation}. \hypertarget{classBaseStationUi_ad9e4d5079883b96a1a12d0f9db529360}{
+\index{BaseStationUi@{BaseStationUi}!$\sim$BaseStationUi@{$\sim$BaseStationUi}}
+\index{$\sim$BaseStationUi@{$\sim$BaseStationUi}!BaseStationUi@{BaseStationUi}}
+\subsubsection[{$\sim$BaseStationUi}]{\setlength{\rightskip}{0pt plus 5cm}BaseStationUi::$\sim$BaseStationUi (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classBaseStationUi_ad9e4d5079883b96a1a12d0f9db529360}
+Destructor for the \hyperlink{classBaseStation}{BaseStation}. 
+
+\subsection{Member Function Documentation}
+\hypertarget{classBaseStationUi_a60918c9ab8ff9714af4a45067349a4b7}{
+\index{BaseStationUi@{BaseStationUi}!signalDisconnect@{signalDisconnect}}
+\index{signalDisconnect@{signalDisconnect}!BaseStationUi@{BaseStationUi}}
+\subsubsection[{signalDisconnect}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStationUi::signalDisconnect (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classBaseStationUi_a60918c9ab8ff9714af4a45067349a4b7}
+Signal emitted when the user want to disconnect from USAR. \hypertarget{classBaseStationUi_a58c791391c932937050b7e9ea73c064d}{
+\index{BaseStationUi@{BaseStationUi}!signalMessage@{signalMessage}}
+\index{signalMessage@{signalMessage}!BaseStationUi@{BaseStationUi}}
+\subsubsection[{signalMessage}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStationUi::signalMessage (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{msg}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classBaseStationUi_a58c791391c932937050b7e9ea73c064d}
+Signal emitted when the UI must send a Raw Command to USARSim. 
+\begin{DoxyParams}{Parameters}
+{\em msg} & the message to send to USAR. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classBaseStationUi_aa840d4d0187d14fce73a192dd2f81cef}{
+\index{BaseStationUi@{BaseStationUi}!signalSpawnRobot@{signalSpawnRobot}}
+\index{signalSpawnRobot@{signalSpawnRobot}!BaseStationUi@{BaseStationUi}}
+\subsubsection[{signalSpawnRobot}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStationUi::signalSpawnRobot (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{location}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classBaseStationUi_aa840d4d0187d14fce73a192dd2f81cef}
+Signal emitted to notify that a robot must be spawned. 
+\begin{DoxyParams}{Parameters}
+{\em location} & the location in the map where the robot must be spawned. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classBaseStationUi_a591be9134fb7673ab8ba1c30e51eade2}{
+\index{BaseStationUi@{BaseStationUi}!signalUPISConnect@{signalUPISConnect}}
+\index{signalUPISConnect@{signalUPISConnect}!BaseStationUi@{BaseStationUi}}
+\subsubsection[{signalUPISConnect}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStationUi::signalUPISConnect (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{address, }
+\item[{const quint16}]{port}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classBaseStationUi_a591be9134fb7673ab8ba1c30e51eade2}
+Signal emitted to notify the UPIS address-\/port pair. 
+\begin{DoxyParams}{Parameters}
+{\em address} & the UPIS IP address. \\
+\hline
+{\em port} & the UPIS port number. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classBaseStationUi_a1a62c9bc9bc446bba7b3bbaae36d47d4}{
+\index{BaseStationUi@{BaseStationUi}!signalUSARConnect@{signalUSARConnect}}
+\index{signalUSARConnect@{signalUSARConnect}!BaseStationUi@{BaseStationUi}}
+\subsubsection[{signalUSARConnect}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStationUi::signalUSARConnect (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{address, }
+\item[{const quint16}]{port}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classBaseStationUi_a1a62c9bc9bc446bba7b3bbaae36d47d4}
+Signal emitted to connect to USAR, running at the address-\/port pair in the parameters. 
+\begin{DoxyParams}{Parameters}
+{\em address} & the USAR IP address. \\
+\hline
+{\em port} & the USAR port number. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+graphics/\hyperlink{basestationui_8h}{basestationui.h}\item 
+graphics/\hyperlink{basestationui_8cpp}{basestationui.cpp}\end{DoxyCompactItemize}

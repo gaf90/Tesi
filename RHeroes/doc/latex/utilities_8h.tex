@@ -1,0 +1,123 @@
+\hypertarget{utilities_8h}{
+\section{shared/utilities.h File Reference}
+\label{utilities_8h}\index{shared/utilities.h@{shared/utilities.h}}
+}
+{\ttfamily \#include \char`\"{}constants.h\char`\"{}}\par
+{\ttfamily \#include $<$cmath$>$}\par
+\subsection*{Functions}
+\begin{DoxyCompactItemize}
+\item 
+{\footnotesize template$<$typename T $>$ }\\static T \hyperlink{utilities_8h_ac3e002abe462d6f38382b30c24027357}{max} (T a, T b)
+\item 
+{\footnotesize template$<$typename T $>$ }\\static T \hyperlink{utilities_8h_a8fe7ba335a6cc12207810c798365ac85}{min} (T a, T b)
+\item 
+static double \hyperlink{utilities_8h_a2d631d634ecf4964b390570dd3e1544a}{wrap} (double angle)
+\item 
+static double \hyperlink{utilities_8h_af0d88b79fb58c307cfa6ec3c105054ae}{fromDegreeToRadiants} (double angle)
+\item 
+static double \hyperlink{utilities_8h_a72250a11d26e046c0f986ac476552920}{fromRadiantToDegree} (double angle)
+\end{DoxyCompactItemize}
+
+
+\subsection{Function Documentation}
+\hypertarget{utilities_8h_af0d88b79fb58c307cfa6ec3c105054ae}{
+\index{utilities.h@{utilities.h}!fromDegreeToRadiants@{fromDegreeToRadiants}}
+\index{fromDegreeToRadiants@{fromDegreeToRadiants}!utilities.h@{utilities.h}}
+\subsubsection[{fromDegreeToRadiants}]{\setlength{\rightskip}{0pt plus 5cm}static double fromDegreeToRadiants (
+\begin{DoxyParamCaption}
+\item[{double}]{angle}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}inline, static\mbox{]}}}}
+\label{utilities_8h_af0d88b79fb58c307cfa6ec3c105054ae}
+This function convert an angle from its representation in degree to the one in radiant.
+
+
+\begin{DoxyParams}{Parameters}
+{\em angle} & that must be converted \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+a double that is the converted angle 
+\end{DoxyReturn}
+\hypertarget{utilities_8h_a72250a11d26e046c0f986ac476552920}{
+\index{utilities.h@{utilities.h}!fromRadiantToDegree@{fromRadiantToDegree}}
+\index{fromRadiantToDegree@{fromRadiantToDegree}!utilities.h@{utilities.h}}
+\subsubsection[{fromRadiantToDegree}]{\setlength{\rightskip}{0pt plus 5cm}static double fromRadiantToDegree (
+\begin{DoxyParamCaption}
+\item[{double}]{angle}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}inline, static\mbox{]}}}}
+\label{utilities_8h_a72250a11d26e046c0f986ac476552920}
+This function convert an angle from its representation in radiant to the one in degree.
+
+
+\begin{DoxyParams}{Parameters}
+{\em angle} & that must be converted \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+a double that is the converted angle 
+\end{DoxyReturn}
+\hypertarget{utilities_8h_ac3e002abe462d6f38382b30c24027357}{
+\index{utilities.h@{utilities.h}!max@{max}}
+\index{max@{max}!utilities.h@{utilities.h}}
+\subsubsection[{max}]{\setlength{\rightskip}{0pt plus 5cm}template$<$typename T $>$ static T max (
+\begin{DoxyParamCaption}
+\item[{T}]{a, }
+\item[{T}]{b}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}inline, static\mbox{]}}}}
+\label{utilities_8h_ac3e002abe462d6f38382b30c24027357}
+This function calculates the maximum beetween two values of type T
+
+
+\begin{DoxyParams}{Parameters}
+{\em a} & First value \\
+\hline
+{\em b} & Second value \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+max\{a,b\} 
+\end{DoxyReturn}
+\hypertarget{utilities_8h_a8fe7ba335a6cc12207810c798365ac85}{
+\index{utilities.h@{utilities.h}!min@{min}}
+\index{min@{min}!utilities.h@{utilities.h}}
+\subsubsection[{min}]{\setlength{\rightskip}{0pt plus 5cm}template$<$typename T $>$ static T min (
+\begin{DoxyParamCaption}
+\item[{T}]{a, }
+\item[{T}]{b}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}inline, static\mbox{]}}}}
+\label{utilities_8h_a8fe7ba335a6cc12207810c798365ac85}
+This function calculates the minimum beetween two values of type T
+
+
+\begin{DoxyParams}{Parameters}
+{\em a} & First value \\
+\hline
+{\em b} & Second value \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+min\{a,b\} 
+\end{DoxyReturn}
+\hypertarget{utilities_8h_a2d631d634ecf4964b390570dd3e1544a}{
+\index{utilities.h@{utilities.h}!wrap@{wrap}}
+\index{wrap@{wrap}!utilities.h@{utilities.h}}
+\subsubsection[{wrap}]{\setlength{\rightskip}{0pt plus 5cm}static double wrap (
+\begin{DoxyParamCaption}
+\item[{double}]{angle}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}inline, static\mbox{]}}}}
+\label{utilities_8h_a2d631d634ecf4964b390570dd3e1544a}
+This function wraps an angle that is bigger than 360° and returns its equivalent within 0 and 360° Or it wraps the angle if it is smaller tha -\/360° and returns its equivalent within -\/360° and 0°
+
+
+\begin{DoxyParams}{Parameters}
+{\em angle} & that must be wrapped \\
+\hline
+\end{DoxyParams}
+\begin{DoxyReturn}{Returns}
+a double that represents the wrapped angle 
+\end{DoxyReturn}

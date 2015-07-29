@@ -1,0 +1,91 @@
+\hypertarget{classLaserSensor}{
+\section{LaserSensor Class Reference}
+\label{classLaserSensor}\index{LaserSensor@{LaserSensor}}
+}
+
+
+\hyperlink{classSensor}{Sensor} for laser scans.  
+
+
+
+
+{\ttfamily \#include $<$lasersensor.h$>$}
+
+Inheritance diagram for LaserSensor:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classLaserSensor}
+\end{center}
+\end{figure}
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classLaserSensor_aa7b966f0849ce5c43920480abcae50f0}{onMessageReceived} (const \hyperlink{classMessage}{Message} \&message)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classLaserSensor_a342c1557c4dbfa0401efa0c50dc0c6fb}{LaserSensor} (QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classLaserSensor_a3a1c45b4a6206163c713dbeec1d5d735}{$\sim$LaserSensor} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{classSensor}{Sensor} for laser scans. 
+
+\hyperlink{classLaserSensor}{LaserSensor} implements a \hyperlink{classSensor}{Sensor} that parses laser data and signals it through the common \hyperlink{classSensor}{Sensor} interface in the form of \hyperlink{classLaserData}{LaserData} message
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classLaserData}{LaserData} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classLaserSensor_a342c1557c4dbfa0401efa0c50dc0c6fb}{
+\index{LaserSensor@{LaserSensor}!LaserSensor@{LaserSensor}}
+\index{LaserSensor@{LaserSensor}!LaserSensor@{LaserSensor}}
+\subsubsection[{LaserSensor}]{\setlength{\rightskip}{0pt plus 5cm}LaserSensor::LaserSensor (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)}}
+\label{classLaserSensor_a342c1557c4dbfa0401efa0c50dc0c6fb}
+Constructs a new \hyperlink{classLaserSensor}{LaserSensor}
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classLaserSensor_a3a1c45b4a6206163c713dbeec1d5d735}{
+\index{LaserSensor@{LaserSensor}!$\sim$LaserSensor@{$\sim$LaserSensor}}
+\index{$\sim$LaserSensor@{$\sim$LaserSensor}!LaserSensor@{LaserSensor}}
+\subsubsection[{$\sim$LaserSensor}]{\setlength{\rightskip}{0pt plus 5cm}LaserSensor::$\sim$LaserSensor (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classLaserSensor_a3a1c45b4a6206163c713dbeec1d5d735}
+Destroys the \hyperlink{classLaserSensor}{LaserSensor} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classLaserSensor_aa7b966f0849ce5c43920480abcae50f0}{
+\index{LaserSensor@{LaserSensor}!onMessageReceived@{onMessageReceived}}
+\index{onMessageReceived@{onMessageReceived}!LaserSensor@{LaserSensor}}
+\subsubsection[{onMessageReceived}]{\setlength{\rightskip}{0pt plus 5cm}void LaserSensor::onMessageReceived (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{message}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual, slot\mbox{]}}}}
+\label{classLaserSensor_aa7b966f0849ce5c43920480abcae50f0}
+\hyperlink{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{Sensor::onMessageReceived()} implementation for \hyperlink{classLaserSensor}{LaserSensor} 
+
+Implements \hyperlink{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{Sensor}.
+
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+middleware/sensor/\hyperlink{lasersensor_8h}{lasersensor.h}\item 
+middleware/sensor/\hyperlink{lasersensor_8cpp}{lasersensor.cpp}\end{DoxyCompactItemize}

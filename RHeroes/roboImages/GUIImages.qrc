@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="koIconMessageManager">koIcon.jpg</file>
+        <file alias="okIconMessageManager">okIcon.jpg</file>
+        <file alias="leftArrow">leftArrow.jpg</file>
+        <file alias="rightArrow">rightArrow.jpg</file>
+        <file alias="victim1">Immagine.jpg</file>
+        <file alias="victim2">Immagine2.jpg</file>
+        <file alias="victim3">Immagine3.jpg</file>
+        <file alias="unreachableCameraImage">unreachableRobot.jpeg</file>
+        <file alias="noImageAvailable">noimageavailable.jpg</file>
+    </qresource>
+</RCC>

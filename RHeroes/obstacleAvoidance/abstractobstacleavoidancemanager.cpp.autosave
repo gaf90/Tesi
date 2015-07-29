@@ -1,0 +1,27 @@
+#include "abstractobstaclemanager.h"
+
+#include <QDebug>
+#include <QApplication>
+#include <typeinfo>
+#include <QStringList>
+#include "shared/constants.h"
+#include "shared/utilities.h"
+#include "data/pose.h"
+#include "data/wheelmessage.h"
+#include "data/wirelessmessage.h"
+#include "data/buddymessage.h"
+#include "pathPlanner/pathplannerutils.h"
+#include "slam/geometry/point.h"
+#include <QTimer>
+#include "slam/geometry/rototranslation.h"
+#include "shared/random.h"
+#include "shared/config.h"
+#include "data/errornotificationmessage.h"
+#include "logic/inversekinematiccf.h"
+#include "time.h";
+
+using namespace Data;
+using namespace PathPlanner;
+using namespace SLAM::Geometry;
+
+

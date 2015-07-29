@@ -1,0 +1,91 @@
+\hypertarget{classOdometrySensor}{
+\section{OdometrySensor Class Reference}
+\label{classOdometrySensor}\index{OdometrySensor@{OdometrySensor}}
+}
+
+
+\hyperlink{classSensor}{Sensor} for odometric data.  
+
+
+
+
+{\ttfamily \#include $<$odometrysensor.h$>$}
+
+Inheritance diagram for OdometrySensor:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classOdometrySensor}
+\end{center}
+\end{figure}
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classOdometrySensor_a31000cc77d015a52c4b9d43996ed6ae8}{onMessageReceived} (const \hyperlink{classMessage}{Message} \&message)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classOdometrySensor_a437a9b96f46dd58fc93355404cdff683}{OdometrySensor} (QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classOdometrySensor_a6ad98746685f391390ae75f252c609e2}{$\sim$OdometrySensor} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{classSensor}{Sensor} for odometric data. 
+
+\hyperlink{classOdometrySensor}{OdometrySensor} implements a \hyperlink{classSensor}{Sensor} that parses odometric data and signals it through the common \hyperlink{classSensor}{Sensor} interface in the form of an \hyperlink{classOdometryData}{OdometryData} message
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classOdometryData}{OdometryData} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classOdometrySensor_a437a9b96f46dd58fc93355404cdff683}{
+\index{OdometrySensor@{OdometrySensor}!OdometrySensor@{OdometrySensor}}
+\index{OdometrySensor@{OdometrySensor}!OdometrySensor@{OdometrySensor}}
+\subsubsection[{OdometrySensor}]{\setlength{\rightskip}{0pt plus 5cm}OdometrySensor::OdometrySensor (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)}}
+\label{classOdometrySensor_a437a9b96f46dd58fc93355404cdff683}
+Constructs a new \hyperlink{classOdometrySensor}{OdometrySensor}
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classOdometrySensor_a6ad98746685f391390ae75f252c609e2}{
+\index{OdometrySensor@{OdometrySensor}!$\sim$OdometrySensor@{$\sim$OdometrySensor}}
+\index{$\sim$OdometrySensor@{$\sim$OdometrySensor}!OdometrySensor@{OdometrySensor}}
+\subsubsection[{$\sim$OdometrySensor}]{\setlength{\rightskip}{0pt plus 5cm}OdometrySensor::$\sim$OdometrySensor (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classOdometrySensor_a6ad98746685f391390ae75f252c609e2}
+Destroys the \hyperlink{classOdometrySensor}{OdometrySensor} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classOdometrySensor_a31000cc77d015a52c4b9d43996ed6ae8}{
+\index{OdometrySensor@{OdometrySensor}!onMessageReceived@{onMessageReceived}}
+\index{onMessageReceived@{onMessageReceived}!OdometrySensor@{OdometrySensor}}
+\subsubsection[{onMessageReceived}]{\setlength{\rightskip}{0pt plus 5cm}void OdometrySensor::onMessageReceived (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{message}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual, slot\mbox{]}}}}
+\label{classOdometrySensor_a31000cc77d015a52c4b9d43996ed6ae8}
+\hyperlink{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{Sensor::onMessageReceived()} implementation for \hyperlink{classOdometrySensor}{OdometrySensor} 
+
+Implements \hyperlink{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{Sensor}.
+
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+middleware/sensor/\hyperlink{odometrysensor_8h}{odometrysensor.h}\item 
+middleware/sensor/\hyperlink{odometrysensor_8cpp}{odometrysensor.cpp}\end{DoxyCompactItemize}

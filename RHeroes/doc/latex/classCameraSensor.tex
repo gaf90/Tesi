@@ -1,0 +1,91 @@
+\hypertarget{classCameraSensor}{
+\section{CameraSensor Class Reference}
+\label{classCameraSensor}\index{CameraSensor@{CameraSensor}}
+}
+
+
+\hyperlink{classSensor}{Sensor} for camera data.  
+
+
+
+
+{\ttfamily \#include $<$camerasensor.h$>$}
+
+Inheritance diagram for CameraSensor:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classCameraSensor}
+\end{center}
+\end{figure}
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classCameraSensor_a7ac39be83c8f461b0d6e057d8b2d4011}{onMessageReceived} (const \hyperlink{classMessage}{Message} \&message)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classCameraSensor_a0aed1ea5c345d9c964ec91ce35448e49}{CameraSensor} (QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classCameraSensor_ad55bb359dcb32fef636013e960e45a34}{$\sim$CameraSensor} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{classSensor}{Sensor} for camera data. 
+
+\hyperlink{classCameraSensor}{CameraSensor} implements a \hyperlink{classSensor}{Sensor} that parses raw image data obtained by the UPIS controller and signals it through the common \hyperlink{classSensor}{Sensor} interface in the form of a \hyperlink{classCameraData}{CameraData} message
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classCameraData}{CameraData} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classCameraSensor_a0aed1ea5c345d9c964ec91ce35448e49}{
+\index{CameraSensor@{CameraSensor}!CameraSensor@{CameraSensor}}
+\index{CameraSensor@{CameraSensor}!CameraSensor@{CameraSensor}}
+\subsubsection[{CameraSensor}]{\setlength{\rightskip}{0pt plus 5cm}CameraSensor::CameraSensor (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)}}
+\label{classCameraSensor_a0aed1ea5c345d9c964ec91ce35448e49}
+Constructs a new \hyperlink{classCameraSensor}{CameraSensor}
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classCameraSensor_ad55bb359dcb32fef636013e960e45a34}{
+\index{CameraSensor@{CameraSensor}!$\sim$CameraSensor@{$\sim$CameraSensor}}
+\index{$\sim$CameraSensor@{$\sim$CameraSensor}!CameraSensor@{CameraSensor}}
+\subsubsection[{$\sim$CameraSensor}]{\setlength{\rightskip}{0pt plus 5cm}CameraSensor::$\sim$CameraSensor (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classCameraSensor_ad55bb359dcb32fef636013e960e45a34}
+Destroys the \hyperlink{classCameraSensor}{CameraSensor} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classCameraSensor_a7ac39be83c8f461b0d6e057d8b2d4011}{
+\index{CameraSensor@{CameraSensor}!onMessageReceived@{onMessageReceived}}
+\index{onMessageReceived@{onMessageReceived}!CameraSensor@{CameraSensor}}
+\subsubsection[{onMessageReceived}]{\setlength{\rightskip}{0pt plus 5cm}void CameraSensor::onMessageReceived (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{message}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual, slot\mbox{]}}}}
+\label{classCameraSensor_a7ac39be83c8f461b0d6e057d8b2d4011}
+\hyperlink{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{Sensor::onMessageReceived()} implementation for \hyperlink{classCameraSensor}{CameraSensor} 
+
+Implements \hyperlink{classSensor_a71fbeb7fbebe8813ad74c57e45c066bc}{Sensor}.
+
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+middleware/sensor/\hyperlink{camerasensor_8h}{camerasensor.h}\item 
+middleware/sensor/\hyperlink{camerasensor_8cpp}{camerasensor.cpp}\end{DoxyCompactItemize}

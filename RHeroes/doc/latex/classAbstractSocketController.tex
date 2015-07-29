@@ -1,0 +1,197 @@
+\hypertarget{classAbstractSocketController}{
+\section{AbstractSocketController Class Reference}
+\label{classAbstractSocketController}\index{AbstractSocketController@{AbstractSocketController}}
+}
+
+
+Shared functionalities for socket based controllers.  
+
+
+
+
+{\ttfamily \#include $<$abstractsocketcontroller.h$>$}
+
+Inheritance diagram for AbstractSocketController:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classAbstractSocketController}
+\end{center}
+\end{figure}
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classAbstractSocketController_a13af2e22144c96860f6a3975365dc1ff}{connectToHost} (const QString \&address, quint16 port)
+\item 
+virtual void \hyperlink{classAbstractSocketController_a399c565654a03e6cb352dfc576460ff7}{disconnectFromHost} ()
+\end{DoxyCompactItemize}
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classAbstractSocketController_af09d800cea400d85c29e07322faaf934}{signalConnected} ()
+\item 
+void \hyperlink{classAbstractSocketController_afc064b05ae1963fc4741d61c49e9b6ad}{signalError} (const QString \&msg)
+\item 
+void \hyperlink{classAbstractSocketController_a5d1dee9948125660e67a671cabed122f}{signalDisconnected} ()
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual \hyperlink{classAbstractSocketController_a62f22568654956a18a108f81ca18cda5}{$\sim$AbstractSocketController} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Slots}
+\begin{DoxyCompactItemize}
+\item 
+virtual void \hyperlink{classAbstractSocketController_a3816ceb3b12f0028dea99d010349ec41}{invokeReadData} ()=0
+\end{DoxyCompactItemize}
+\subsection*{Protected Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classAbstractSocketController_a1e51beb8c90ce4f69a57d6464812f177}{AbstractSocketController} (QObject $\ast$parent=0)
+\end{DoxyCompactItemize}
+\subsection*{Protected Attributes}
+\begin{DoxyCompactItemize}
+\item 
+QTcpSocket $\ast$ \hyperlink{classAbstractSocketController_aa979beef2f78be052f3e7f3255cdc644}{socket}
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Shared functionalities for socket based controllers. 
+
+\hyperlink{classAbstractSocketController}{AbstractSocketController} is a class that holds the methods and functionalities shared by controllers based on socket connections
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classUSARController}{USARController} 
+
+\hyperlink{classUPISController}{UPISController} 
+
+WSSController 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classAbstractSocketController_a1e51beb8c90ce4f69a57d6464812f177}{
+\index{AbstractSocketController@{AbstractSocketController}!AbstractSocketController@{AbstractSocketController}}
+\index{AbstractSocketController@{AbstractSocketController}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{AbstractSocketController}]{\setlength{\rightskip}{0pt plus 5cm}AbstractSocketController::AbstractSocketController (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit, protected\mbox{]}}}}
+\label{classAbstractSocketController_a1e51beb8c90ce4f69a57d6464812f177}
+Constructs a new \hyperlink{classAbstractSocketController}{AbstractSocketController}
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classAbstractSocketController_a62f22568654956a18a108f81ca18cda5}{
+\index{AbstractSocketController@{AbstractSocketController}!$\sim$AbstractSocketController@{$\sim$AbstractSocketController}}
+\index{$\sim$AbstractSocketController@{$\sim$AbstractSocketController}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{$\sim$AbstractSocketController}]{\setlength{\rightskip}{0pt plus 5cm}AbstractSocketController::$\sim$AbstractSocketController (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classAbstractSocketController_a62f22568654956a18a108f81ca18cda5}
+Destroys the \hyperlink{classAbstractSocketController}{AbstractSocketController} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classAbstractSocketController_a13af2e22144c96860f6a3975365dc1ff}{
+\index{AbstractSocketController@{AbstractSocketController}!connectToHost@{connectToHost}}
+\index{connectToHost@{connectToHost}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{connectToHost}]{\setlength{\rightskip}{0pt plus 5cm}void AbstractSocketController::connectToHost (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{address, }
+\item[{quint16}]{port}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual, slot\mbox{]}}}}
+\label{classAbstractSocketController_a13af2e22144c96860f6a3975365dc1ff}
+Establishes a connection to the specified host/port. This method is non-\/blocking, hence, before any communication is attempted the application should wait for the \hyperlink{classAbstractSocketController_af09d800cea400d85c29e07322faaf934}{signalConnected()} signal
+
+
+\begin{DoxyParams}{Parameters}
+{\em address} & IP address or hostname of the target host \\
+\hline
+{\em port} & TCP port to connect to \\
+\hline
+\end{DoxyParams}
+
+
+Reimplemented in \hyperlink{classUPISController_a78dcb22bf16cca05bebd9dd923c7ba28}{UPISController}.
+
+\hypertarget{classAbstractSocketController_a399c565654a03e6cb352dfc576460ff7}{
+\index{AbstractSocketController@{AbstractSocketController}!disconnectFromHost@{disconnectFromHost}}
+\index{disconnectFromHost@{disconnectFromHost}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{disconnectFromHost}]{\setlength{\rightskip}{0pt plus 5cm}void AbstractSocketController::disconnectFromHost (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual, slot\mbox{]}}}}
+\label{classAbstractSocketController_a399c565654a03e6cb352dfc576460ff7}
+Terminates the connection to the host. The actual disconnection notification is emitted through the \hyperlink{classAbstractSocketController_a5d1dee9948125660e67a671cabed122f}{signalDisconnected()} signal 
+
+Reimplemented in \hyperlink{classUPISController_a5d09ac4efcf74e202c905bf195f029dc}{UPISController}.
+
+\hypertarget{classAbstractSocketController_a3816ceb3b12f0028dea99d010349ec41}{
+\index{AbstractSocketController@{AbstractSocketController}!invokeReadData@{invokeReadData}}
+\index{invokeReadData@{invokeReadData}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{invokeReadData}]{\setlength{\rightskip}{0pt plus 5cm}virtual void AbstractSocketController::invokeReadData (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}protected, pure virtual, slot\mbox{]}}}}
+\label{classAbstractSocketController_a3816ceb3b12f0028dea99d010349ec41}
+This slot should be implemented by subclasses. The slot is called every time new data is available in the input buffer 
+
+Implemented in \hyperlink{classUPISController_a20c811385172668d1071f267cc52c559}{UPISController}, and \hyperlink{classUSARController_aea2a9dde924c625b83da33a6848f41f0}{USARController}.
+
+\hypertarget{classAbstractSocketController_af09d800cea400d85c29e07322faaf934}{
+\index{AbstractSocketController@{AbstractSocketController}!signalConnected@{signalConnected}}
+\index{signalConnected@{signalConnected}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{signalConnected}]{\setlength{\rightskip}{0pt plus 5cm}void AbstractSocketController::signalConnected (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classAbstractSocketController_af09d800cea400d85c29e07322faaf934}
+This signal is emitted once the connection has been successfully established \hypertarget{classAbstractSocketController_a5d1dee9948125660e67a671cabed122f}{
+\index{AbstractSocketController@{AbstractSocketController}!signalDisconnected@{signalDisconnected}}
+\index{signalDisconnected@{signalDisconnected}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{signalDisconnected}]{\setlength{\rightskip}{0pt plus 5cm}void AbstractSocketController::signalDisconnected (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classAbstractSocketController_a5d1dee9948125660e67a671cabed122f}
+This signal is emitted once the connection has been successfully terminated \hypertarget{classAbstractSocketController_afc064b05ae1963fc4741d61c49e9b6ad}{
+\index{AbstractSocketController@{AbstractSocketController}!signalError@{signalError}}
+\index{signalError@{signalError}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{signalError}]{\setlength{\rightskip}{0pt plus 5cm}void AbstractSocketController::signalError (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{msg}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classAbstractSocketController_afc064b05ae1963fc4741d61c49e9b6ad}
+This signal is emitted in case an error happens
+
+
+\begin{DoxyParams}{Parameters}
+{\em msg} & The formatted error message \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Data Documentation}
+\hypertarget{classAbstractSocketController_aa979beef2f78be052f3e7f3255cdc644}{
+\index{AbstractSocketController@{AbstractSocketController}!socket@{socket}}
+\index{socket@{socket}!AbstractSocketController@{AbstractSocketController}}
+\subsubsection[{socket}]{\setlength{\rightskip}{0pt plus 5cm}QTcpSocket$\ast$ {\bf AbstractSocketController::socket}\hspace{0.3cm}{\ttfamily  \mbox{[}protected\mbox{]}}}}
+\label{classAbstractSocketController_aa979beef2f78be052f3e7f3255cdc644}
+The actual socket used for connections, left protected for subclass convenience 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+connection/\hyperlink{abstractsocketcontroller_8h}{abstractsocketcontroller.h}\item 
+connection/\hyperlink{abstractsocketcontroller_8cpp}{abstractsocketcontroller.cpp}\end{DoxyCompactItemize}

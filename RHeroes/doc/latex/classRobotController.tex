@@ -1,0 +1,125 @@
+\hypertarget{classRobotController}{
+\section{RobotController Class Reference}
+\label{classRobotController}\index{RobotController@{RobotController}}
+}
+
+
+{\ttfamily \#include $<$robotcontroller.h$>$}
+
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classRobotController_af7a4ba9ea79c8905b428b2bf1b7e2c5b}{onStateUpdated} ()
+\item 
+void \hyperlink{classRobotController_a9493a7011af6b4b31413ed42fe3fc518}{onSensorData} (const \hyperlink{classMessage}{Message} \&data)
+\end{DoxyCompactItemize}
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classRobotController_a4c89049efc91e8d172dc9ca6a78f50fd}{launchCommand} (const QString \&command)
+\item 
+void \hyperlink{classRobotController_acf08e56717b3134fee7e36f481746e8f}{stateUpdate} ()
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classRobotController_af0d6c5568c619b1931792d1fd30bf755}{RobotController} (QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classRobotController_a4441cd6adf323a0ce3c454dc4f02efaf}{$\sim$RobotController} ()
+\item 
+void \hyperlink{classRobotController_a2b6ec73f9327db8a85b0acbeb085c9cc}{moveRobot} (double angle1, double translation, double angle2)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+This class represents the logic for the robot. It is the class that analyzes the data and takes the decisions. 
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classRobotController_af0d6c5568c619b1931792d1fd30bf755}{
+\index{RobotController@{RobotController}!RobotController@{RobotController}}
+\index{RobotController@{RobotController}!RobotController@{RobotController}}
+\subsubsection[{RobotController}]{\setlength{\rightskip}{0pt plus 5cm}RobotController::RobotController (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit\mbox{]}}}}
+\label{classRobotController_af0d6c5568c619b1931792d1fd30bf755}
+Constructor for the \hyperlink{classRobotController}{RobotController} \hypertarget{classRobotController_a4441cd6adf323a0ce3c454dc4f02efaf}{
+\index{RobotController@{RobotController}!$\sim$RobotController@{$\sim$RobotController}}
+\index{$\sim$RobotController@{$\sim$RobotController}!RobotController@{RobotController}}
+\subsubsection[{$\sim$RobotController}]{\setlength{\rightskip}{0pt plus 5cm}RobotController::$\sim$RobotController (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRobotController_a4441cd6adf323a0ce3c454dc4f02efaf}
+Destructor for the \hyperlink{classRobotController}{RobotController}. 
+
+\subsection{Member Function Documentation}
+\hypertarget{classRobotController_a4c89049efc91e8d172dc9ca6a78f50fd}{
+\index{RobotController@{RobotController}!launchCommand@{launchCommand}}
+\index{launchCommand@{launchCommand}!RobotController@{RobotController}}
+\subsubsection[{launchCommand}]{\setlength{\rightskip}{0pt plus 5cm}void RobotController::launchCommand (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{command}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classRobotController_a4c89049efc91e8d172dc9ca6a78f50fd}
+This signal sends a command to the connectors. 
+\begin{DoxyParams}{Parameters}
+{\em command} & to send to the connectors. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classRobotController_a2b6ec73f9327db8a85b0acbeb085c9cc}{
+\index{RobotController@{RobotController}!moveRobot@{moveRobot}}
+\index{moveRobot@{moveRobot}!RobotController@{RobotController}}
+\subsubsection[{moveRobot}]{\setlength{\rightskip}{0pt plus 5cm}void RobotController::moveRobot (
+\begin{DoxyParamCaption}
+\item[{double}]{angle1, }
+\item[{double}]{translation, }
+\item[{double}]{angle2}
+\end{DoxyParamCaption}
+)}}
+\label{classRobotController_a2b6ec73f9327db8a85b0acbeb085c9cc}
+This method represents the high-\/level primitives for the robot's movement. The primitive is composed of a Rotation, a Translation and a final rotation. 
+\begin{DoxyParams}{Parameters}
+{\em angle1} & how many degrees the robot must rotate for the initial rotation. \\
+\hline
+{\em translation} & how many metres the robot must translate. \\
+\hline
+{\em angle2} & how many degrees the robot must rotate for the last rotation. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classRobotController_a9493a7011af6b4b31413ed42fe3fc518}{
+\index{RobotController@{RobotController}!onSensorData@{onSensorData}}
+\index{onSensorData@{onSensorData}!RobotController@{RobotController}}
+\subsubsection[{onSensorData}]{\setlength{\rightskip}{0pt plus 5cm}void RobotController::onSensorData (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{data}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classRobotController_a9493a7011af6b4b31413ed42fe3fc518}
+This slot is invoked to handle the message from a sensor. \hypertarget{classRobotController_af7a4ba9ea79c8905b428b2bf1b7e2c5b}{
+\index{RobotController@{RobotController}!onStateUpdated@{onStateUpdated}}
+\index{onStateUpdated@{onStateUpdated}!RobotController@{RobotController}}
+\subsubsection[{onStateUpdated}]{\setlength{\rightskip}{0pt plus 5cm}void RobotController::onStateUpdated (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classRobotController_af7a4ba9ea79c8905b428b2bf1b7e2c5b}
+This slot is invoked to handle the state update. \hypertarget{classRobotController_acf08e56717b3134fee7e36f481746e8f}{
+\index{RobotController@{RobotController}!stateUpdate@{stateUpdate}}
+\index{stateUpdate@{stateUpdate}!RobotController@{RobotController}}
+\subsubsection[{stateUpdate}]{\setlength{\rightskip}{0pt plus 5cm}void RobotController::stateUpdate (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classRobotController_acf08e56717b3134fee7e36f481746e8f}
+This signal is emitted to notify that the state has been updated. 
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+logic/\hyperlink{robotcontroller_8h}{robotcontroller.h}\item 
+logic/\hyperlink{robotcontroller_8cpp}{robotcontroller.cpp}\end{DoxyCompactItemize}

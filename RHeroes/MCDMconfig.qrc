@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="MCDMConfig">MCDMconf.conf</file>
+    </qresource>
+</RCC>

@@ -1,0 +1,146 @@
+\hypertarget{classBaseStation}{
+\section{BaseStation Class Reference}
+\label{classBaseStation}\index{BaseStation@{BaseStation}}
+}
+
+
+{\ttfamily \#include $<$basestation.h$>$}
+
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classBaseStation_a2631f0dbae32d3a10927e2f18d3ead58}{onUSARConnect} (const QString \&usarAddress, const quint16 usarPort)
+\item 
+void \hyperlink{classBaseStation_aca664e65d1e0e3b990b3106fd600de41}{onUPISConnect} (const QString \&upisAddress, const quint16 upisPort)
+\item 
+void \hyperlink{classBaseStation_a990cb61a39abf47ca0d85ceca7d73d4e}{onSpawnRobot} (const QString \&location)
+\item 
+void \hyperlink{classBaseStation_a730b89786800009e9db8786731079a14}{onConnected} ()
+\item 
+void \hyperlink{classBaseStation_ab5ae8f091793b66c08fc4a0347421d43}{onMessage} (const \hyperlink{classMessage}{Message} \&message)
+\end{DoxyCompactItemize}
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classBaseStation_aa2cb3b3f3427ac36070d0ad3f7683d52}{signalInitialLocation} (const QString \&params)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classBaseStation_a83693a6c16e49c70f6f6e4f1e069be53}{BaseStation} (QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classBaseStation_a212490a9b30dec2eee3aa623cb88320a}{$\sim$BaseStation} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+This class represents the controller for the \hyperlink{classBaseStation}{BaseStation}. It is responsible for the communication between the user and USARSim. 
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classBaseStation_a83693a6c16e49c70f6f6e4f1e069be53}{
+\index{BaseStation@{BaseStation}!BaseStation@{BaseStation}}
+\index{BaseStation@{BaseStation}!BaseStation@{BaseStation}}
+\subsubsection[{BaseStation}]{\setlength{\rightskip}{0pt plus 5cm}BaseStation::BaseStation (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit\mbox{]}}}}
+\label{classBaseStation_a83693a6c16e49c70f6f6e4f1e069be53}
+Default Constructor. \hypertarget{classBaseStation_a212490a9b30dec2eee3aa623cb88320a}{
+\index{BaseStation@{BaseStation}!$\sim$BaseStation@{$\sim$BaseStation}}
+\index{$\sim$BaseStation@{$\sim$BaseStation}!BaseStation@{BaseStation}}
+\subsubsection[{$\sim$BaseStation}]{\setlength{\rightskip}{0pt plus 5cm}BaseStation::$\sim$BaseStation (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classBaseStation_a212490a9b30dec2eee3aa623cb88320a}
+Virtual Destructor. 
+
+\subsection{Member Function Documentation}
+\hypertarget{classBaseStation_a730b89786800009e9db8786731079a14}{
+\index{BaseStation@{BaseStation}!onConnected@{onConnected}}
+\index{onConnected@{onConnected}!BaseStation@{BaseStation}}
+\subsubsection[{onConnected}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStation::onConnected (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classBaseStation_a730b89786800009e9db8786731079a14}
+Slot invoked when the controllers have installed succesfully a connection. \hypertarget{classBaseStation_ab5ae8f091793b66c08fc4a0347421d43}{
+\index{BaseStation@{BaseStation}!onMessage@{onMessage}}
+\index{onMessage@{onMessage}!BaseStation@{BaseStation}}
+\subsubsection[{onMessage}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStation::onMessage (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{message}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classBaseStation_ab5ae8f091793b66c08fc4a0347421d43}
+Slot invoked for logging purposes, up to now. It logs the messages received from the controllers. \hypertarget{classBaseStation_a990cb61a39abf47ca0d85ceca7d73d4e}{
+\index{BaseStation@{BaseStation}!onSpawnRobot@{onSpawnRobot}}
+\index{onSpawnRobot@{onSpawnRobot}!BaseStation@{BaseStation}}
+\subsubsection[{onSpawnRobot}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStation::onSpawnRobot (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{location}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classBaseStation_a990cb61a39abf47ca0d85ceca7d73d4e}
+Slot invoked when the UI signals to spawn a new robot. The method spawns a robot at the location passed as argument and gives to it the informations to connect to USARSim and UPIS. 
+\begin{DoxyParams}{Parameters}
+{\em location} & the location in which the robot must be spawned. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classBaseStation_aca664e65d1e0e3b990b3106fd600de41}{
+\index{BaseStation@{BaseStation}!onUPISConnect@{onUPISConnect}}
+\index{onUPISConnect@{onUPISConnect}!BaseStation@{BaseStation}}
+\subsubsection[{onUPISConnect}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStation::onUPISConnect (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{upisAddress, }
+\item[{const quint16}]{upisPort}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classBaseStation_aca664e65d1e0e3b990b3106fd600de41}
+Slot invoked when the UI signals to connect to UPIS. This slot only stores the arguments to further spawns of the robots. 
+\begin{DoxyParams}{Parameters}
+{\em upisAddress} & the IP address of UPIS. \\
+\hline
+{\em upisPort} & the port of UPIS. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classBaseStation_a2631f0dbae32d3a10927e2f18d3ead58}{
+\index{BaseStation@{BaseStation}!onUSARConnect@{onUSARConnect}}
+\index{onUSARConnect@{onUSARConnect}!BaseStation@{BaseStation}}
+\subsubsection[{onUSARConnect}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStation::onUSARConnect (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{usarAddress, }
+\item[{const quint16}]{usarPort}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classBaseStation_a2631f0dbae32d3a10927e2f18d3ead58}
+Slot invoked when the UI signals to connect to USARSim. 
+\begin{DoxyParams}{Parameters}
+{\em usarAddress} & the IP address of USARSim. \\
+\hline
+{\em usarPort} & the port of USARSim. \\
+\hline
+\end{DoxyParams}
+\hypertarget{classBaseStation_aa2cb3b3f3427ac36070d0ad3f7683d52}{
+\index{BaseStation@{BaseStation}!signalInitialLocation@{signalInitialLocation}}
+\index{signalInitialLocation@{signalInitialLocation}!BaseStation@{BaseStation}}
+\subsubsection[{signalInitialLocation}]{\setlength{\rightskip}{0pt plus 5cm}void BaseStation::signalInitialLocation (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{params}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classBaseStation_aa2cb3b3f3427ac36070d0ad3f7683d52}
+Signal emitted when a new initial location for the robots is available. 
+\begin{DoxyParams}{Parameters}
+{\em param} & the new available location. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+logic/\hyperlink{basestation_8h}{basestation.h}\item 
+logic/\hyperlink{basestation_8cpp}{basestation.cpp}\end{DoxyCompactItemize}

@@ -1,0 +1,87 @@
+\hypertarget{classCameraData}{
+\section{CameraData Class Reference}
+\label{classCameraData}\index{CameraData@{CameraData}}
+}
+
+
+Camera data message.  
+
+
+
+
+{\ttfamily \#include $<$cameradata.h$>$}
+
+Inheritance diagram for CameraData:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classCameraData}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classCameraData_af81f01ad4e2c27cc83e60c822bb1799d}{CameraData} (const QImage \&frame)
+\item 
+virtual \hyperlink{classCameraData_a480aa2bf05624b1530bc10f8ed80e977}{$\sim$CameraData} ()
+\item 
+const QImage \& \hyperlink{classCameraData_a6572495dbce01031c41587a91e0a73a1}{getFrame} () const 
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Camera data message. 
+
+This class contains a camera frame, signalled by \hyperlink{classCameraSensor}{CameraSensor}.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classCameraSensor}{CameraSensor} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classCameraData_af81f01ad4e2c27cc83e60c822bb1799d}{
+\index{CameraData@{CameraData}!CameraData@{CameraData}}
+\index{CameraData@{CameraData}!CameraData@{CameraData}}
+\subsubsection[{CameraData}]{\setlength{\rightskip}{0pt plus 5cm}CameraData::CameraData (
+\begin{DoxyParamCaption}
+\item[{const QImage \&}]{frame}
+\end{DoxyParamCaption}
+)}}
+\label{classCameraData_af81f01ad4e2c27cc83e60c822bb1799d}
+Constructs a new \hyperlink{classCameraData}{CameraData} message, containing a camera frame
+
+
+\begin{DoxyParams}{Parameters}
+{\em frame} & The camera frame \\
+\hline
+\end{DoxyParams}
+\hypertarget{classCameraData_a480aa2bf05624b1530bc10f8ed80e977}{
+\index{CameraData@{CameraData}!$\sim$CameraData@{$\sim$CameraData}}
+\index{$\sim$CameraData@{$\sim$CameraData}!CameraData@{CameraData}}
+\subsubsection[{$\sim$CameraData}]{\setlength{\rightskip}{0pt plus 5cm}CameraData::$\sim$CameraData (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classCameraData_a480aa2bf05624b1530bc10f8ed80e977}
+Destroys the \hyperlink{classCameraData}{CameraData} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classCameraData_a6572495dbce01031c41587a91e0a73a1}{
+\index{CameraData@{CameraData}!getFrame@{getFrame}}
+\index{getFrame@{getFrame}!CameraData@{CameraData}}
+\subsubsection[{getFrame}]{\setlength{\rightskip}{0pt plus 5cm}const QImage \& CameraData::getFrame (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classCameraData_a6572495dbce01031c41587a91e0a73a1}
+\begin{DoxyReturn}{Returns}
+A const reference to the camera frame 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+data/\hyperlink{cameradata_8h}{cameradata.h}\item 
+data/\hyperlink{cameradata_8cpp}{cameradata.cpp}\end{DoxyCompactItemize}

@@ -1,0 +1,133 @@
+\hypertarget{classUSARController}{
+\section{USARController Class Reference}
+\label{classUSARController}\index{USARController@{USARController}}
+}
+
+
+USARSim connection controller.  
+
+
+
+
+{\ttfamily \#include $<$usarcontroller.h$>$}
+
+Inheritance diagram for USARController:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classUSARController}
+\end{center}
+\end{figure}
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classUSARController_a2becbd888b35304051cc2095570b3b18}{sendMessage} (const \hyperlink{classMessage}{Message} \&msg)
+\end{DoxyCompactItemize}
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classUSARController_a42e81ce338bb7799c42ca968369aaf7b}{signalMessage} (const \hyperlink{classMessage}{Message} \&msg)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classUSARController_ac5c82f3819f4a34b00cfcc63547ab2a6}{USARController} (QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classUSARController_a450f87dd480cc0c0895255fa4bebf869}{$\sim$USARController} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Slots}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classUSARController_aea2a9dde924c625b83da33a6848f41f0}{invokeReadData} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+USARSim connection controller. 
+
+\hyperlink{classUSARController}{USARController} manages the low-\/level communication to the USARSim server. A signal is emitted every time a message is received from the server, conversely the controller will forward a message to the server in case a connected \hyperlink{classDriver}{Driver} has requested so. Both input and output communication data is encapsulated in \hyperlink{classUSARMessage}{USARMessage} instances
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classUSARMessage}{USARMessage} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classUSARController_ac5c82f3819f4a34b00cfcc63547ab2a6}{
+\index{USARController@{USARController}!USARController@{USARController}}
+\index{USARController@{USARController}!USARController@{USARController}}
+\subsubsection[{USARController}]{\setlength{\rightskip}{0pt plus 5cm}USARController::USARController (
+\begin{DoxyParamCaption}
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit\mbox{]}}}}
+\label{classUSARController_ac5c82f3819f4a34b00cfcc63547ab2a6}
+Constructs a new \hyperlink{classUSARController}{USARController}
+
+
+\begin{DoxyParams}{Parameters}
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classUSARController_a450f87dd480cc0c0895255fa4bebf869}{
+\index{USARController@{USARController}!$\sim$USARController@{$\sim$USARController}}
+\index{$\sim$USARController@{$\sim$USARController}!USARController@{USARController}}
+\subsubsection[{$\sim$USARController}]{\setlength{\rightskip}{0pt plus 5cm}USARController::$\sim$USARController (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classUSARController_a450f87dd480cc0c0895255fa4bebf869}
+Destroys the \hyperlink{classUSARController}{USARController} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classUSARController_aea2a9dde924c625b83da33a6848f41f0}{
+\index{USARController@{USARController}!invokeReadData@{invokeReadData}}
+\index{invokeReadData@{invokeReadData}!USARController@{USARController}}
+\subsubsection[{invokeReadData}]{\setlength{\rightskip}{0pt plus 5cm}void USARController::invokeReadData (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual, slot\mbox{]}}}}
+\label{classUSARController_aea2a9dde924c625b83da33a6848f41f0}
+\hyperlink{classAbstractSocketController_a3816ceb3b12f0028dea99d010349ec41}{AbstractSocketController::invokeReadData()} implementation for \hyperlink{classUSARController}{USARController} 
+
+Implements \hyperlink{classAbstractSocketController_a3816ceb3b12f0028dea99d010349ec41}{AbstractSocketController}.
+
+\hypertarget{classUSARController_a2becbd888b35304051cc2095570b3b18}{
+\index{USARController@{USARController}!sendMessage@{sendMessage}}
+\index{sendMessage@{sendMessage}!USARController@{USARController}}
+\subsubsection[{sendMessage}]{\setlength{\rightskip}{0pt plus 5cm}void USARController::sendMessage (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{msg}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}slot\mbox{]}}}}
+\label{classUSARController_a2becbd888b35304051cc2095570b3b18}
+Slot aimed at sending a message to the USARSim message. This method expects a \hyperlink{classUSARMessage}{USARMessage} as input argument, any different object will be quietly ignored. The definition of the slot reports a generic \hyperlink{classMessage}{Message} in order to be compatible with the corresponding signal definition of the \hyperlink{classDriver}{Driver} interface
+
+
+\begin{DoxyParams}{Parameters}
+{\em msg} & \hyperlink{classMessage}{Message} containing information to send to USARSim \\
+\hline
+\end{DoxyParams}
+\hypertarget{classUSARController_a42e81ce338bb7799c42ca968369aaf7b}{
+\index{USARController@{USARController}!signalMessage@{signalMessage}}
+\index{signalMessage@{signalMessage}!USARController@{USARController}}
+\subsubsection[{signalMessage}]{\setlength{\rightskip}{0pt plus 5cm}void USARController::signalMessage (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{msg}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classUSARController_a42e81ce338bb7799c42ca968369aaf7b}
+Signals a \hyperlink{classMessage}{Message} to the connected Sensor(s). The actual object provided is an instance of \hyperlink{classUSARMessage}{USARMessage} containing the information sent by the server; the definition of the signal reports a generic \hyperlink{classMessage}{Message} in order to be compatible with thecorresponding slot definition of the \hyperlink{classSensor}{Sensor} interface
+
+
+\begin{DoxyParams}{Parameters}
+{\em msg} & \hyperlink{classMessage}{Message} containing information sent by USARSim \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+connection/\hyperlink{usarcontroller_8h}{usarcontroller.h}\item 
+connection/\hyperlink{usarcontroller_8cpp}{usarcontroller.cpp}\end{DoxyCompactItemize}

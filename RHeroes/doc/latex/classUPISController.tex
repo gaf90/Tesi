@@ -1,0 +1,165 @@
+\hypertarget{classUPISController}{
+\section{UPISController Class Reference}
+\label{classUPISController}\index{UPISController@{UPISController}}
+}
+
+
+UPIS connection controller.  
+
+
+
+
+{\ttfamily \#include $<$upiscontroller.h$>$}
+
+Inheritance diagram for UPISController:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classUPISController}
+\end{center}
+\end{figure}
+\subsection*{Public Slots}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classUPISController_a78dcb22bf16cca05bebd9dd923c7ba28}{connectToHost} (const QString \&address, quint16 port)
+\item 
+void \hyperlink{classUPISController_a5d09ac4efcf74e202c905bf195f029dc}{disconnectFromHost} ()
+\end{DoxyCompactItemize}
+\subsection*{Signals}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classUPISController_a465e09e443e28302641ec092e285ae0a}{signalMessage} (const \hyperlink{classMessage}{Message} \&msg)
+\end{DoxyCompactItemize}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classUPISController_a57d677d6dc0d2bbe68d93f24ec929e72}{UPISController} (double fps, int nRobot, QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classUPISController_a90625e6f59c386fd4b59c8652ab81977}{$\sim$UPISController} ()
+\end{DoxyCompactItemize}
+\subsection*{Protected Slots}
+\begin{DoxyCompactItemize}
+\item 
+void \hyperlink{classUPISController_a20c811385172668d1071f267cc52c559}{invokeReadData} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+UPIS connection controller. 
+
+\hyperlink{classUPISController}{UPISController} manages the low-\/level communication to the UPIS server. A portion of the UDK draw area is periodically requested to the server and the raw image data is emitted in the form of a \hyperlink{classUPISMessage}{UPISMessage}
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classUPISMessage}{UPISMessage} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classUPISController_a57d677d6dc0d2bbe68d93f24ec929e72}{
+\index{UPISController@{UPISController}!UPISController@{UPISController}}
+\index{UPISController@{UPISController}!UPISController@{UPISController}}
+\subsubsection[{UPISController}]{\setlength{\rightskip}{0pt plus 5cm}UPISController::UPISController (
+\begin{DoxyParamCaption}
+\item[{double}]{fps, }
+\item[{int}]{nRobot, }
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit\mbox{]}}}}
+\label{classUPISController_a57d677d6dc0d2bbe68d93f24ec929e72}
+Constructs a new \hyperlink{classUPISController}{UPISController}. Two mandatory pieces of information are necessary: how frequently to request frames to UPIS (in frames per second), and the incremental number identifying the robot. The latter is necessary in order to determine what portion of the UDK draw area to request.
+
+
+\begin{DoxyParams}{Parameters}
+{\em fps} & The frame frequency requested \\
+\hline
+{\em nRobot} & Incremental number identifying the robot \\
+\hline
+{\em parent} & Optional QObject parent \\
+\hline
+\end{DoxyParams}
+\hypertarget{classUPISController_a90625e6f59c386fd4b59c8652ab81977}{
+\index{UPISController@{UPISController}!$\sim$UPISController@{$\sim$UPISController}}
+\index{$\sim$UPISController@{$\sim$UPISController}!UPISController@{UPISController}}
+\subsubsection[{$\sim$UPISController}]{\setlength{\rightskip}{0pt plus 5cm}UPISController::$\sim$UPISController (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classUPISController_a90625e6f59c386fd4b59c8652ab81977}
+Destroys the \hyperlink{classUPISController}{UPISController} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classUPISController_a78dcb22bf16cca05bebd9dd923c7ba28}{
+\index{UPISController@{UPISController}!connectToHost@{connectToHost}}
+\index{connectToHost@{connectToHost}!UPISController@{UPISController}}
+\subsubsection[{connectToHost}]{\setlength{\rightskip}{0pt plus 5cm}void UPISController::connectToHost (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{address, }
+\item[{quint16}]{port}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual, slot\mbox{]}}}}
+\label{classUPISController_a78dcb22bf16cca05bebd9dd923c7ba28}
+Establishes a connection to the specified host/port. This method is non-\/blocking, hence, before any communication is attempted the application should wait for the \hyperlink{classAbstractSocketController_af09d800cea400d85c29e07322faaf934}{signalConnected()} signal
+
+
+\begin{DoxyParams}{Parameters}
+{\em address} & IP address or hostname of the target host \\
+\hline
+{\em port} & TCP port to connect to \\
+\hline
+\end{DoxyParams}
+
+
+Overridden in order to start frame request timer 
+
+Reimplemented from \hyperlink{classAbstractSocketController_a13af2e22144c96860f6a3975365dc1ff}{AbstractSocketController}.
+
+\hypertarget{classUPISController_a5d09ac4efcf74e202c905bf195f029dc}{
+\index{UPISController@{UPISController}!disconnectFromHost@{disconnectFromHost}}
+\index{disconnectFromHost@{disconnectFromHost}!UPISController@{UPISController}}
+\subsubsection[{disconnectFromHost}]{\setlength{\rightskip}{0pt plus 5cm}void UPISController::disconnectFromHost (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual, slot\mbox{]}}}}
+\label{classUPISController_a5d09ac4efcf74e202c905bf195f029dc}
+Terminates the connection to the host. The actual disconnection notification is emitted through the \hyperlink{classAbstractSocketController_a5d1dee9948125660e67a671cabed122f}{signalDisconnected()} signal 
+
+Overridden in order to stop frame request timer 
+
+Reimplemented from \hyperlink{classAbstractSocketController_a399c565654a03e6cb352dfc576460ff7}{AbstractSocketController}.
+
+\hypertarget{classUPISController_a20c811385172668d1071f267cc52c559}{
+\index{UPISController@{UPISController}!invokeReadData@{invokeReadData}}
+\index{invokeReadData@{invokeReadData}!UPISController@{UPISController}}
+\subsubsection[{invokeReadData}]{\setlength{\rightskip}{0pt plus 5cm}void UPISController::invokeReadData (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}protected, virtual, slot\mbox{]}}}}
+\label{classUPISController_a20c811385172668d1071f267cc52c559}
+\hyperlink{classAbstractSocketController_a3816ceb3b12f0028dea99d010349ec41}{AbstractSocketController::invokeReadData()} implementation for \hyperlink{classUPISController}{UPISController} 
+
+Implements \hyperlink{classAbstractSocketController_a3816ceb3b12f0028dea99d010349ec41}{AbstractSocketController}.
+
+\hypertarget{classUPISController_a465e09e443e28302641ec092e285ae0a}{
+\index{UPISController@{UPISController}!signalMessage@{signalMessage}}
+\index{signalMessage@{signalMessage}!UPISController@{UPISController}}
+\subsubsection[{signalMessage}]{\setlength{\rightskip}{0pt plus 5cm}void UPISController::signalMessage (
+\begin{DoxyParamCaption}
+\item[{const {\bf Message} \&}]{msg}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}signal\mbox{]}}}}
+\label{classUPISController_a465e09e443e28302641ec092e285ae0a}
+Signals a \hyperlink{classMessage}{Message} to the connected Sensor(s). The actual object provided is an instance of \hyperlink{classUPISMessage}{UPISMessage} containing raw image data; the definition of the signal reports a generic \hyperlink{classMessage}{Message} in order to be compatible with the slot definition of the \hyperlink{classSensor}{Sensor} interface
+
+
+\begin{DoxyParams}{Parameters}
+{\em msg} & \hyperlink{classMessage}{Message} containing raw image data \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+connection/\hyperlink{upiscontroller_8h}{upiscontroller.h}\item 
+connection/\hyperlink{upiscontroller_8cpp}{upiscontroller.cpp}\end{DoxyCompactItemize}

@@ -1,0 +1,75 @@
+\hypertarget{classRobot}{
+\section{Robot Class Reference}
+\label{classRobot}\index{Robot@{Robot}}
+}
+
+
+{\ttfamily \#include $<$robot.h$>$}
+
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classRobot_a0f2108bd63b096f1b55fee82f7366895}{Robot} (const QString \&location, const uint identifier, QObject $\ast$parent=0)
+\item 
+virtual \hyperlink{classRobot_a924320124b09c2f2ac1621aa210d5f38}{$\sim$Robot} ()
+\item 
+void \hyperlink{classRobot_aba6fa8d5cbf173ca0df078c6212612fd}{spawnRobot} (const QString \&usarAddress, const quint16 usarPort, const QString \&upisAddress, const quint16 upisPort)
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+This class represents the high-\/level robot. It connects the sensors and the drivers to the controllers that are connected to the servers 
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classRobot_a0f2108bd63b096f1b55fee82f7366895}{
+\index{Robot@{Robot}!Robot@{Robot}}
+\index{Robot@{Robot}!Robot@{Robot}}
+\subsubsection[{Robot}]{\setlength{\rightskip}{0pt plus 5cm}Robot::Robot (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{location, }
+\item[{const uint}]{identifier, }
+\item[{QObject $\ast$}]{parent = {\ttfamily 0}}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}explicit\mbox{]}}}}
+\label{classRobot_a0f2108bd63b096f1b55fee82f7366895}
+Contructor for the robot. \hypertarget{classRobot_a924320124b09c2f2ac1621aa210d5f38}{
+\index{Robot@{Robot}!$\sim$Robot@{$\sim$Robot}}
+\index{$\sim$Robot@{$\sim$Robot}!Robot@{Robot}}
+\subsubsection[{$\sim$Robot}]{\setlength{\rightskip}{0pt plus 5cm}Robot::$\sim$Robot (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classRobot_a924320124b09c2f2ac1621aa210d5f38}
+Destructor for the robot. 
+
+\subsection{Member Function Documentation}
+\hypertarget{classRobot_aba6fa8d5cbf173ca0df078c6212612fd}{
+\index{Robot@{Robot}!spawnRobot@{spawnRobot}}
+\index{spawnRobot@{spawnRobot}!Robot@{Robot}}
+\subsubsection[{spawnRobot}]{\setlength{\rightskip}{0pt plus 5cm}void Robot::spawnRobot (
+\begin{DoxyParamCaption}
+\item[{const QString \&}]{usarAddress, }
+\item[{const quint16}]{usarPort, }
+\item[{const QString \&}]{upisAddress, }
+\item[{const quint16}]{upisPort}
+\end{DoxyParamCaption}
+)}}
+\label{classRobot_aba6fa8d5cbf173ca0df078c6212612fd}
+Method that spawns a robot in the simulation, connecting it to USARSim and to UPIS. 
+\begin{DoxyParams}{Parameters}
+{\em usarAddress} & the IP address of USARSim. \\
+\hline
+{\em usarPort} & the port of USARSim. \\
+\hline
+{\em upisAddress} & the IP address of UPIS. \\
+\hline
+{\em upisPort} & the port of UPIS. \\
+\hline
+\end{DoxyParams}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+logic/\hyperlink{robot_8h}{robot.h}\item 
+logic/\hyperlink{robot_8cpp}{robot.cpp}\end{DoxyCompactItemize}

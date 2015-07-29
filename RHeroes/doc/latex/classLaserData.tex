@@ -1,0 +1,121 @@
+\hypertarget{classLaserData}{
+\section{LaserData Class Reference}
+\label{classLaserData}\index{LaserData@{LaserData}}
+}
+
+
+Laser data message.  
+
+
+
+
+{\ttfamily \#include $<$laserdata.h$>$}
+
+Inheritance diagram for LaserData:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classLaserData}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classLaserData_aa774147523cb75f1a29a48ae9e966357}{LaserData} (double fov, double resolution, const QList$<$ double $>$ \&readings)
+\item 
+virtual \hyperlink{classLaserData_a4e3ebdad7df74033e606281b118874e8}{$\sim$LaserData} ()
+\item 
+const QList$<$ double $>$ \& \hyperlink{classLaserData_a21e8ace6cf591b71f174c54dff409886}{getReadings} () const 
+\item 
+double \hyperlink{classLaserData_a66ec4933e7529639fcdecf0d4c93088a}{getFOV} () const 
+\item 
+double \hyperlink{classLaserData_ae883461416b168cdc243cf1f03aedf1d}{getResolution} () const 
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Laser data message. 
+
+This class represents laser data readings, signalled by \hyperlink{classLaserSensor}{LaserSensor}
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classLaserSensor}{LaserSensor} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classLaserData_aa774147523cb75f1a29a48ae9e966357}{
+\index{LaserData@{LaserData}!LaserData@{LaserData}}
+\index{LaserData@{LaserData}!LaserData@{LaserData}}
+\subsubsection[{LaserData}]{\setlength{\rightskip}{0pt plus 5cm}LaserData::LaserData (
+\begin{DoxyParamCaption}
+\item[{double}]{fov, }
+\item[{double}]{resolution, }
+\item[{const QList$<$ double $>$ \&}]{readings}
+\end{DoxyParamCaption}
+)}}
+\label{classLaserData_aa774147523cb75f1a29a48ae9e966357}
+Constructs a new \hyperlink{classLaserData}{LaserData} message, containing the readings and properties of the laser sensor
+
+
+\begin{DoxyParams}{Parameters}
+{\em fov} & The field of view of the laser sensor \\
+\hline
+{\em resolution} & The tick resolution of the laser sensor (in radiants) \\
+\hline
+{\em readings} & The list of dinstance readings \\
+\hline
+\end{DoxyParams}
+\hypertarget{classLaserData_a4e3ebdad7df74033e606281b118874e8}{
+\index{LaserData@{LaserData}!$\sim$LaserData@{$\sim$LaserData}}
+\index{$\sim$LaserData@{$\sim$LaserData}!LaserData@{LaserData}}
+\subsubsection[{$\sim$LaserData}]{\setlength{\rightskip}{0pt plus 5cm}LaserData::$\sim$LaserData (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}virtual\mbox{]}}}}
+\label{classLaserData_a4e3ebdad7df74033e606281b118874e8}
+Destroys the \hyperlink{classLaserData}{LaserData} 
+
+\subsection{Member Function Documentation}
+\hypertarget{classLaserData_a66ec4933e7529639fcdecf0d4c93088a}{
+\index{LaserData@{LaserData}!getFOV@{getFOV}}
+\index{getFOV@{getFOV}!LaserData@{LaserData}}
+\subsubsection[{getFOV}]{\setlength{\rightskip}{0pt plus 5cm}double LaserData::getFOV (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classLaserData_a66ec4933e7529639fcdecf0d4c93088a}
+\begin{DoxyReturn}{Returns}
+The field of view of the laser sensor 
+\end{DoxyReturn}
+\hypertarget{classLaserData_a21e8ace6cf591b71f174c54dff409886}{
+\index{LaserData@{LaserData}!getReadings@{getReadings}}
+\index{getReadings@{getReadings}!LaserData@{LaserData}}
+\subsubsection[{getReadings}]{\setlength{\rightskip}{0pt plus 5cm}const QList$<$ double $>$ \& LaserData::getReadings (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classLaserData_a21e8ace6cf591b71f174c54dff409886}
+\begin{DoxyReturn}{Returns}
+A const reference to the list of distance readings 
+\end{DoxyReturn}
+\hypertarget{classLaserData_ae883461416b168cdc243cf1f03aedf1d}{
+\index{LaserData@{LaserData}!getResolution@{getResolution}}
+\index{getResolution@{getResolution}!LaserData@{LaserData}}
+\subsubsection[{getResolution}]{\setlength{\rightskip}{0pt plus 5cm}double LaserData::getResolution (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classLaserData_ae883461416b168cdc243cf1f03aedf1d}
+\begin{DoxyReturn}{Returns}
+The tick resolution of the laser sensor (in radiants) 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+data/\hyperlink{laserdata_8h}{laserdata.h}\item 
+data/\hyperlink{laserdata_8cpp}{laserdata.cpp}\end{DoxyCompactItemize}

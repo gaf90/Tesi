@@ -1,0 +1,95 @@
+\hypertarget{classUPISMessage}{
+\section{UPISMessage Class Reference}
+\label{classUPISMessage}\index{UPISMessage@{UPISMessage}}
+}
+
+
+\hyperlink{classMessage}{Message} representing data sent from UPIS.  
+
+
+
+
+{\ttfamily \#include $<$upismessage.h$>$}
+
+Inheritance diagram for UPISMessage:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classUPISMessage}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\hyperlink{classUPISMessage_aa3cb85cd725551f1bc74f09413f8e9f2}{UPISMessage} (bool jpeg, const QByteArray \&binData)
+\item 
+bool \hyperlink{classUPISMessage_a48073be902fb18f8240a1eae81636cb8}{isJPEG} () const 
+\item 
+bool \hyperlink{classUPISMessage_a71b6912bd6db1175d9102a730af2e724}{isRAW} () const 
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+\hyperlink{classMessage}{Message} representing data sent from UPIS. 
+
+The \hyperlink{classUPISMessage}{UPISMessage} class represents a message returned by UPIS. It is simply a raw image byte array with the additional property of being able to distinguish between JPEG and RAW image data.
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classUPISController}{UPISController} 
+\end{DoxySeeAlso}
+
+
+\subsection{Constructor \& Destructor Documentation}
+\hypertarget{classUPISMessage_aa3cb85cd725551f1bc74f09413f8e9f2}{
+\index{UPISMessage@{UPISMessage}!UPISMessage@{UPISMessage}}
+\index{UPISMessage@{UPISMessage}!UPISMessage@{UPISMessage}}
+\subsubsection[{UPISMessage}]{\setlength{\rightskip}{0pt plus 5cm}UPISMessage::UPISMessage (
+\begin{DoxyParamCaption}
+\item[{bool}]{jpeg, }
+\item[{const QByteArray \&}]{binData}
+\end{DoxyParamCaption}
+)}}
+\label{classUPISMessage_aa3cb85cd725551f1bc74f09413f8e9f2}
+Initialises a new \hyperlink{classUPISMessage}{UPISMessage} with data content binData
+
+
+\begin{DoxyParams}{Parameters}
+{\em jpeg} & true if the content is JPEG data, false if RAW data \\
+\hline
+{\em binData} & Binary image data \\
+\hline
+\end{DoxyParams}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classUPISMessage_a48073be902fb18f8240a1eae81636cb8}{
+\index{UPISMessage@{UPISMessage}!isJPEG@{isJPEG}}
+\index{isJPEG@{isJPEG}!UPISMessage@{UPISMessage}}
+\subsubsection[{isJPEG}]{\setlength{\rightskip}{0pt plus 5cm}bool UPISMessage::isJPEG (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classUPISMessage_a48073be902fb18f8240a1eae81636cb8}
+\begin{DoxyReturn}{Returns}
+true if the binary data is in JPEG format, false otherwise 
+\end{DoxyReturn}
+\hypertarget{classUPISMessage_a71b6912bd6db1175d9102a730af2e724}{
+\index{UPISMessage@{UPISMessage}!isRAW@{isRAW}}
+\index{isRAW@{isRAW}!UPISMessage@{UPISMessage}}
+\subsubsection[{isRAW}]{\setlength{\rightskip}{0pt plus 5cm}bool UPISMessage::isRAW (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+) const}}
+\label{classUPISMessage_a71b6912bd6db1175d9102a730af2e724}
+Logical negation of \hyperlink{classUPISMessage_a48073be902fb18f8240a1eae81636cb8}{isJPEG()}
+
+\begin{DoxyReturn}{Returns}
+true is the binary data is in RAW format, false otherwise 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following files:\begin{DoxyCompactItemize}
+\item 
+data/\hyperlink{upismessage_8h}{upismessage.h}\item 
+data/\hyperlink{upismessage_8cpp}{upismessage.cpp}\end{DoxyCompactItemize}

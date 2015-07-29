@@ -1,0 +1,58 @@
+\hypertarget{classMessage}{
+\section{Message Class Reference}
+\label{classMessage}\index{Message@{Message}}
+}
+
+
+Generic message container.  
+
+
+
+
+{\ttfamily \#include $<$message.h$>$}
+
+Inheritance diagram for Message:\begin{figure}[H]
+\begin{center}
+\leavevmode
+\includegraphics[height=2.000000cm]{classMessage}
+\end{center}
+\end{figure}
+\subsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+virtual \hyperlink{classMessage_a58bb4122c52eaf1ac8f68d3ea0f151b8}{operator QString} ()
+\end{DoxyCompactItemize}
+
+
+\subsection{Detailed Description}
+Generic message container. 
+
+The \hyperlink{classMessage}{Message} class represents a common interface for message exchange used for sensors, drivers, low-\/level controllers and so on
+
+\begin{DoxySeeAlso}{See also}
+\hyperlink{classSensor}{Sensor} 
+
+\hyperlink{classDriver}{Driver} 
+\end{DoxySeeAlso}
+
+
+\subsection{Member Function Documentation}
+\hypertarget{classMessage_a58bb4122c52eaf1ac8f68d3ea0f151b8}{
+\index{Message@{Message}!operator QString@{operator QString}}
+\index{operator QString@{operator QString}!Message@{Message}}
+\subsubsection[{operator QString}]{\setlength{\rightskip}{0pt plus 5cm}virtual Message::operator QString (
+\begin{DoxyParamCaption}
+{}
+\end{DoxyParamCaption}
+)\hspace{0.3cm}{\ttfamily  \mbox{[}inline, virtual\mbox{]}}}}
+\label{classMessage_a58bb4122c52eaf1ac8f68d3ea0f151b8}
+This method is meant to be overridden by subclasses, it provides a string representation of the \hyperlink{classMessage}{Message} (or just some information about it). A default empty string implementation is provided. The presence of this virtual method also ensures that RTTI support is compiled in for this class
+
+\begin{DoxyReturn}{Returns}
+A string representation of the \hyperlink{classMessage}{Message} 
+\end{DoxyReturn}
+
+
+The documentation for this class was generated from the following file:\begin{DoxyCompactItemize}
+\item 
+data/\hyperlink{message_8h}{message.h}\end{DoxyCompactItemize}
