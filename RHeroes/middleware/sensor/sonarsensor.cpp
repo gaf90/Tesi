@@ -100,7 +100,9 @@ void SonarSensor::onMessageReceived(const Data::Message &message)
                 if(sonarPosition == Data::SonarData::Back){
                     minBackDistance = getMinDistance(backSonar);
                     maxBackDistance = getMaxDistance(backSonar);
-                }else{
+                }
+                 else
+                {
 
                     minFrontDistance = getMinDistance(frontSonar);
                     maxFrontDistance = getMaxDistance(frontSonar);

@@ -85,8 +85,7 @@ HEADERS += \
     slam/support/topvalues.h \
     slam/support/inverses.h \
     slam/support/nearestmatrices.h \
-    slam/support/stopwatch.h \
-    slam/PRM/prmalgorithm.h 
+    slam/support/stopwatch.h \ 
 
 !isEmpty(USE_ISAM) {
     SOURCES += \    

@@ -126,7 +126,10 @@ void ExplorationModule::setSLAMModule(SLAM::SLAMModule *slamModule)
     this->slamModule = slamModule;
     map = slamModule->getMap();
     //PRM
-    if(Config::policy==PRM){
+    ldbg << "Exploration Module: Policy is:" << Config::policy <<endl;
+
+    if(Config::policy==PRM)
+    {
         PRM::PRMAlgorithm* prm = slamModule->getPRM();
         ldbg << "Exploration Module: Start Planner PRM, set evaluation and connect modules."<<endl;
 

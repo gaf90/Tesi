@@ -107,9 +107,13 @@ public:
     QVector<QPair<double, double> > calculateInitialSearchSpace();
     QVector<Data::Pose> getPoseFromSearchSpace(QVector<QPair<double,double> > searchSpace);
     QVector<QPair<double,double> >  getReachableSearchSpace(QVector<QPair<double,double> > searchSpace);
-    int calculateBestDistance(QVector<QPair< double,double> > searchSpace);
+    int calculateBestVelocity(QVector<QPair< double,double> > searchSpace);
     int calculateVelocity(QVector<QPair< double,double> > searchSpace);
     int calculateTargetHeading(QVector<QPair< double,double> > searchSpace);
+    QVector<QPair<QPair<double,double>,int> > getLocalMap(const Data::Pose actualPose);
+
+    void oldDynamic(const Data::SonarData &sonar);
+    QVector<QPair<double, double> > getLocalReachableSearchSpace(QVector<QPair<QPair<double,double>,int> > localMap);
 private:
    //=== Movement Helper ===//
    /**

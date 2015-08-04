@@ -23,7 +23,7 @@ QMAKE_CXXFLAGS_RELEASE += -O3 -msse -mmmx
 
 INCLUDEPATH += libraries/eigen3 libraries/RandomLib/include libraries/opencv231
 
-LIBSROOT = $$PWD/libraries/bin
+LIBSROOT = $$_PRO_FILE_PWD_/libraries/bin
 mac:LIBSROOT = $$LIBSROOT/mac
 !mac:unix:LIBSROOT = $$LIBSROOT/linux
 win32:LIBSROOT = $$LIBSROOT/win32

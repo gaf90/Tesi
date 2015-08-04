@@ -247,27 +247,3 @@ OTHER_FILES += \
 
 RESOURCES += \
     roboImages/GUIImages.qrc
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
