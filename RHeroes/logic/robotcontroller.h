@@ -29,6 +29,27 @@
 #include "data/sonardata.h"
 
 #define TELEOPERATION_TIMEOUT_MSEC  5000
+
+#define THRESHOLD 0.23
+#define RUOTASINISTRA_MIN 10
+#define RUOTASINISTRA_MED 20
+#define RUOTASINISTRA_MAX 40
+#define RUOTADESTRA_MIN -10
+#define RUOTADESTRA_MED -20
+#define RUOTADESTRA_MAX -40
+#define VAI_AVANTI 0.5
+#define VAI_INDIETRO -0.3
+
+#define ANGLE_TOL 0.1
+#define TRASL_TOL 0.1
+
+#define UPDATE_STATUS true
+#define OBSTACLE_EMPIRIC true
+#define OBSTACLE_DYNAMIC true
+#define OBSTACLE_NEURAL false
+
+#define RADIUS_LOCAL 1
+#define SEARCH_SPACE_GRANULARITY 360
 /**
  * This class represents the logic for the robot.
  * It is the class that analyzes the data and takes the
@@ -45,7 +66,6 @@ public:
     int wayPointCounter;
     int reactiveFrontBehaviorStatus;
     int reactiveBackBehaviorStatus;
-    int obstacleBehaviorStatus;
 
     /**
      * Constructor for the RobotController
@@ -79,7 +99,6 @@ public:
     void handleBackSonarData(const Data::SonarData &sonar);
     void obstacleAvoidanceEmpiricHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL);
     int getActualMovement(double ls, double rs);
-    tm * getActualTime();
     int changeReactiveFSM(int);
     void handleFrontObstacle(const Data::SonarData &sonar);
     void tryReachWaypoint();
@@ -283,43 +302,63 @@ private:
 
 private:
 
-    bool newAction, isSpeedChanged, isJustChanged;
-    QQueue<Data::Action *> *normalActionQueue;
-    QQueue<PathPlanner::HybridPoseAction *> *hybridActionQueue;
-    double actionStartTimestamp;
-    //QStack<Data::RobotState *> *pastStates;
-    Data::RobotState *pastState;
-    Data::RobotState* actualState;
-    uint robotId;
+    enum reactiveBehaviorEnum {DEACTIVATED,FIRSTTIME,EXEC};
+    enum typeMovementEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
+    enum movementStateEnum {FRONT,RIGHT,LEFT,BACK,STOP};
+    movementStateEnum actualMovement ;
+    enum controlTypeEnum {HYBRID,NORMAL};
+    controlTypeEnum controlRobotType;
+    enum robotTypeEnum{P3AT,KENAF,OTHER};
+    robotTypeEnum robotType;
+    enum statusEnum{ON,OFF};
+    int sonarStatus;
+    statusEnum teleoperationStatus;
+    enum robotAroundEnum{NEAR_TO_POSE,FAR_TO_POSE};
+    robotAroundEnum robotAround;
+
+
     bool explorationModuleState;
+    bool newAction, isSpeedChanged, isJustChanged;
+    bool streamImage;
+    bool isNotificationNeeded, haveReceivedWaypoint;
+    bool userEnabled;
+    bool slowMotion;
+
+    uint robotId;
+
     int lastBatterySent;
     int sonarObstacleTimeNumber;
-
-    bool isKenaf;
-
-    bool streamImage;
-    QMutex *streamMutex;
-
-    bool isNotificationNeeded, haveReceivedWaypoint;
     int waitTime;
     int constantPoseCounter, stallCounter;
-    InverseKinematic *inverseKinematicmModule;
-    bool useHybridControl;
-
-    Data::Pose pastHybridPoseToReach, previousPose;
     int counterAround, countSpeedChange;
-    bool isAround, justStarted;
+    int typeMovement;
+    int refindPathCounter;
+    int tryposeCounter;
 
+    double actionStartTimestamp;
+
+
+    QQueue<Data::Action *> *normalActionQueue;
+    QQueue<PathPlanner::HybridPoseAction *> *hybridActionQueue;
+
+
+    Data::RobotState *pastState;
+    Data::RobotState *actualState;
+    Data::SonarData lastFrontSonarData;
+    Data::Pose pastHybridPoseToReach, previousPose;
+    Data::Pose *actualFrontier;
+    Data::Pose *oldFrontier;
+    Data::WaypointCommand *actualWaypoint;
+
+    QMutex *streamMutex;
+    InverseKinematic *inverseKinematicmModule;
     QTimer *obstacleAvoidanceTimer, *randomActionTimer, *teleOperationTimer;
     QTime crono;
-    bool forceStopRobotMovement, sonarActivated;
-    SLAM::SLAMModule *slam;
-    Data::SonarData lastFrontSonarData;
-    bool userEnabled;
-    PathPlanner::HybridPoseAction *goalToRecompute;
-    bool teleoperationActivated;
 
-    double static const maxSpeedChange;
+    SLAM::SLAMModule *slam;
+    PathPlanner::HybridPoseAction *goalToRecompute;
+
+    QString space;
 };
 
 #endif // ROBOTCONTROLLER_H

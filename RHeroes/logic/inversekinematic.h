@@ -8,8 +8,8 @@
 #define ZERO_THRESHOLD 0.05
 #define SAFETY_PERC .75
 
-#define INVERSE_KIN_TRASL_TOL 0.3
-#define INVERSE_KIN_ANG_TOL 0.2
+#define INVERSE_KIN_TRASL_TOL 0.1
+#define INVERSE_KIN_ANG_TOL 0.1
 
 class InverseKinematic
 {

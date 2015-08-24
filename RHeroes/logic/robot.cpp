@@ -348,13 +348,12 @@ void Robot::handleModuleActivationMessage(const BuddyMessage *buddy)
         robotController->explorationModuleState = moduleStatus;
 
         if (moduleStatus)
-            robotController->sonarActivated = true;
+            robotController->sonarStatus = 0;
         else
         {
             robotController->reactiveBackBehaviorStatus =0;
             robotController->reactiveFrontBehaviorStatus =0;
-            robotController->obstacleBehaviorStatus = 0;
-            robotController->sonarActivated = false;
+            robotController->sonarStatus = 1;
             robotController->stopRobot(true);
         }
     }
@@ -483,8 +482,7 @@ void Robot::onUpdateSignalStrength(QString strength)
         ldbg << "Robot: Error 404 Not found"<<endl;
         robotController->reactiveBackBehaviorStatus =0;
         robotController->reactiveFrontBehaviorStatus =0;
-        robotController->obstacleBehaviorStatus=0;
-        robotController->sonarActivated = false;
+        robotController->sonarStatus = 1;
         robotController->stopRobot(true);
         robotController->explorationModuleState = false;
         robotController->setStatus(false);
