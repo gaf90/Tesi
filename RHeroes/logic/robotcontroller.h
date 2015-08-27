@@ -38,10 +38,11 @@
 #define RUOTADESTRA_MED -20
 #define RUOTADESTRA_MAX -40
 #define VAI_AVANTI 0.5
-#define VAI_INDIETRO -0.3
+#define VAI_INDIETRO -0.2
 
 #define ANGLE_TOL 0.1
 #define TRASL_TOL 0.1
+#define SPEED_LIMIT_ANGLE 10
 
 #define UPDATE_STATUS true
 #define OBSTACLE_EMPIRIC true

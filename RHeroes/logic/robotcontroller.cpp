@@ -214,9 +214,9 @@ void RobotController::handleEmpiricSonarData(const Data::SonarData &sonar)
 
     actualMovement = (movementStateEnum)getActualMovement(actualState->getLeftSpeed(),actualState->getRightSpeed());
 
-    //ldbg<<"Robot Controller: Actual movement = "<<actualMovement<<endl;
+    ldbg<<"Robot Controller: Actual movement = "<< actualMovement<<endl;
 
-    if(sonar.getPosition() == SonarData::Front && (actualMovement == FRONT|| actualMovement == RIGHT || actualMovement == LEFT))
+    if(sonar.getPosition() == SonarData::Front && !(actualMovement == BACK))
     {
         //ldbg << "Robot Controller - empiric: Check front sonar."<<endl;
         handleFrontSonarData(sonar);
@@ -226,8 +226,6 @@ void RobotController::handleEmpiricSonarData(const Data::SonarData &sonar)
         //ldbg << "Robot Controller - empiric: Check back sonar."<<endl;
         handleBackSonarData(sonar);
     }
-   // else
-        //ldbg<< "Robot Controller - empiric: Skip sonar data."<<endl;
 
 }
 
@@ -408,25 +406,45 @@ void RobotController::handleFrontSonarData(const Data::SonarData &sonar)
 
 int RobotController::getActualMovement(double leftSpeed, double rightSpeed)
 {
-    if (leftSpeed>0 && rightSpeed<0)
+    if (normalActionQueue->isEmpty())
     {
-        //ldbg << "Robot Controller: I'm rotating to right"<<endl;
-        return RIGHT;
-    }
-    else if (rightSpeed< 0 && leftSpeed < 0)
-    {
-        //ldbg << "Robot Controller: I'm moving back"<<endl;
-        return BACK;
-    }
-    else if (leftSpeed<0 && rightSpeed>0)
-    {
-        //ldbg << "Robot Controller: I'm rotating to left"<<endl;
-        return LEFT;
+        if (leftSpeed >0 && rightSpeed<0)
+            return RIGHT;
+        if (leftSpeed<0 && rightSpeed>0)
+            return LEFT;
+        if (leftSpeed<0 && rightSpeed<0)
+            return BACK;
+        else
+            return FRONT;
     }
     else
     {
-        //ldbg << "Robot Controller: I'm going straight" <<endl;
-        return FRONT;
+        Action *actualAction = normalActionQueue->head();
+        int type = actualAction->getType();
+        double value = actualAction->getValue();
+
+        ldbg << "Robot Controller: Next action to do is" << type << "with value " << value<<endl;
+
+        if (type == Action::Rotation && value>0)
+        {
+            ldbg << "Robot Controller: I'm rotating to right!"<<endl;
+            return RIGHT;
+        }
+        else if (type == Action::Rotation && value<0)
+        {
+            ldbg << "Robot Controller: I'm rotating to left!"<<endl;
+            return LEFT;
+        }
+        else if (type == Action::Translation && value<0)
+        {
+            ldbg << "Robot Controller: I'm moving backward!"<<endl;
+            return BACK;
+        }
+        else
+        {
+            ldbg << "Robot Controller: I'm going straight" <<endl;
+            return FRONT;
+        }
     }
 }
 
@@ -977,8 +995,8 @@ void RobotController::onPerformActionRCM(PathPlanner::AbstractAction *action)
     sonarStatus = ON;
     if (reactiveFrontBehaviorStatus == EXEC && normalActionQueue->size()!=0)
     {
-       ldbg << "Robot Controller: Ignore perform action" << endl;
-       return;
+        ldbg << "Robot Controller: Ignore perform action" << endl;
+        return;
     }
 
     if(obstacleAvoidanceTimer != NULL && obstacleAvoidanceTimer->isActive()){
@@ -1103,7 +1121,7 @@ void RobotController::odometryClosedLoop(double angle1, double translation, doub
         Action* act1 = new Action();
         act1->setType(Action::Rotation);
         act1->setValue(radiant1);
-        //ldbg << "Robot Controller - odometryClosedLoop: Enqueued a rotation of " << radiant1 << " radiants" << endl;
+        ldbg << "Robot Controller - odometryClosedLoop: Enqueued a rotation of " << fromRadiantToDegree(radiant1) << " grades" << endl;
         normalActionQueue->enqueue(act1);
         newAction = TRUE;
     }
@@ -1113,7 +1131,7 @@ void RobotController::odometryClosedLoop(double angle1, double translation, doub
         act2->setType(Action::Translation);
         act2->setValue(translation);
         normalActionQueue->enqueue(act2);
-        //ldbg<< "Robot Controller - odometryClosedLoop: Enqueued a translation of " << translation << " meters" << endl;
+        ldbg<< "Robot Controller - odometryClosedLoop: Enqueued a translation of " << translation << " meters" << endl;
         newAction = TRUE;
     }
     //I build and enqueue the third action: ROTATION
@@ -1124,7 +1142,7 @@ void RobotController::odometryClosedLoop(double angle1, double translation, doub
         act3->setValue(radiant3);
         normalActionQueue->enqueue(act3);
         newAction = TRUE;
-        //ldbg << "Robot Controller - odometryClosedLoop: Enqueued a rotation of " << angle2 << " radiants" << endl;
+        ldbg << "Robot Controller - odometryClosedLoop: Enqueued a rotation of " << fromRadiantToDegree(angle2) << " grades" << endl;
     }
 }
 
@@ -1313,61 +1331,25 @@ void RobotController::notifyAfterWaypoint()
 void RobotController::controlRotationNewAction(const Action &rotation)
 {
     constantPoseCounter = 0;
-    //If the action is a rotation and the robot is stopped or is not rotating yet
-    //I have to start a rotation.
-    //ldbg << "Robot Controller - ControlRotation: Start rotation" << endl;
 
-    if(rotation.getValue()>0)
+    if(rotation.getValue()> 0)
     {
-        //ldbg << "Robot Controller - ControlRotation: I rotate clockwise!"<< endl;
-
-        if(rotation.getValue()<= fromDegreeToRadiants(LOW_SPEED_LIMIT_ANGLE) || slowMotion)
-            doMovement(-MED_SPEED, MED_SPEED);
+        ldbg << "Robot Controller - ControlRotation: I rotate clockwise!"<< endl;
+        if(rotation.getValue()<= fromDegreeToRadiants(SPEED_LIMIT_ANGLE) || slowMotion)
+            doMovement(-LOW_SPEED, LOW_SPEED);
         else
-            doMovement(-HIGH_SPEED, HIGH_SPEED);
+            doMovement(-MED_SPEED, MED_SPEED);
     }
     else
     {
-        //ldbg << "Robot Controller - ControlRotation: I rotate counter-clockwise!"<< endl;
-        if(rotation.getValue()>= -(fromDegreeToRadiants(LOW_SPEED_LIMIT_ANGLE)) || slowMotion)
-            doMovement(MED_SPEED, -MED_SPEED);
+        ldbg << "Robot Controller - ControlRotation: I rotate counter-clockwise!"<< endl;
+        if(rotation.getValue()>= -(fromDegreeToRadiants(SPEED_LIMIT_ANGLE)) || slowMotion)
+            doMovement(LOW_SPEED, -LOW_SPEED);
         else
-            doMovement(HIGH_SPEED, -HIGH_SPEED);
+            doMovement(MED_SPEED, -MED_SPEED);
     }
     isSpeedChanged = FALSE;
     newAction = FALSE;
-}
-
-void RobotController::controlRotationNearToSetPoint(double distance)
-{
-    //PRM
-    double leftSpeed=actualState->getLeftSpeed();
-    double rightSpeed=actualState->getRightSpeed();
-    if(((fabs(leftSpeed))>MIN_SPEED))
-    {
-        leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
-    }
-    else{
-        if(distance>0){
-            leftSpeed=-MIN_SPEED;
-        }
-        else{
-            leftSpeed=MIN_SPEED;
-        }
-    }
-    if(fabs(rightSpeed)>MIN_SPEED){
-        rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
-    }
-    else{
-        if(distance>0){
-            rightSpeed=MIN_SPEED;
-        }
-        else{
-            rightSpeed=-MIN_SPEED;
-        }
-    }
-    countSpeedChange++;
-    doMovement(leftSpeed, rightSpeed);
 }
 
 void RobotController::controlRotationRobotStall()
@@ -1399,7 +1381,6 @@ void RobotController::controlRotationSetPointReached()
     delete pastState;
     pastState = newState;
 
-    //recall this method to check if i need to do another action
     isJustChanged = TRUE;
     newAction = TRUE;
     countSpeedChange = 0;
@@ -1410,35 +1391,34 @@ void RobotController::controlRotationNegPos()
 {
     if(actualState->getLeftSpeed() < 0)
     {
+        double leftSpeed = actualState->getLeftSpeed();
+        double rightSpeed = actualState->getRightSpeed();
 
-        double leftSpeed=actualState->getLeftSpeed();
-        double rightSpeed=actualState->getRightSpeed();
-        if(((fabs(leftSpeed))>MIN_SPEED)){
-            leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
-        }
-        else{
-            leftSpeed=-MIN_SPEED;
-        }
-        if(fabs(rightSpeed)>MIN_SPEED){
-            rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
-        }
-        else{
-            rightSpeed=MIN_SPEED;
-        }
+        if(((fabs(leftSpeed))>MED_SPEED))
+            leftSpeed = leftSpeed*SPEED_DECR_FACTOR;
+        else
+            leftSpeed = -MED_SPEED;
+        if(fabs(rightSpeed)>MED_SPEED)
+            rightSpeed = rightSpeed*SPEED_DECR_FACTOR;
+        else
+            rightSpeed = MED_SPEED;
+
         doMovement(-leftSpeed, -rightSpeed);
+        ldbg << "Robot Controller - controlRotation: speed inverted (counter-clockwise)" << endl;
         isSpeedChanged = TRUE;
         countSpeedChange++;
-        //ldbg << "Robot Controller - Control Rotation: speed inverted" << endl;
     }
 }
 
 void RobotController::controlRotationPosPos(double distance)
 {
     //PRM
-    if(actualState->getLeftSpeed() > 0){
+    if(actualState->getLeftSpeed() > 0)
+    {
         isSpeedChanged = true;
         countSpeedChange++;
     }
+
     if(distance < fromDegreeToRadiants(LOW_SPEED_LIMIT_ANGLE) || slowMotion){
         doMovement(-LOW_SPEED, LOW_SPEED);
     } else {
@@ -1450,27 +1430,23 @@ void RobotController::controlRotationPosNeg()
 {
     //In this case, i've made a rotation that is higher than what I need:
     //I can send a command to change the direction, slowing down the speed
-    if(actualState->getLeftSpeed() > 0){
-
+    if(actualState->getLeftSpeed() > 0)
+    {
 
         double leftSpeed=actualState->getLeftSpeed();
         double rightSpeed=actualState->getRightSpeed();
 
-        if(((fabs(leftSpeed))>MIN_SPEED)){
+        if(((fabs(leftSpeed))>MED_SPEED))
             leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
-        }
-        else{
-            leftSpeed=MIN_SPEED;
-        }
-        if(fabs(rightSpeed)>MIN_SPEED){
+        else
+            leftSpeed=MED_SPEED;
+        if(fabs(rightSpeed)>MED_SPEED)
             rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
-        }
-        else{
-            rightSpeed=-MIN_SPEED;
-        }
+        else
+            rightSpeed=-MED_SPEED;
 
         doMovement(-leftSpeed, -rightSpeed);
-        //ldbg << "Robot Controller - controlRotation: speed inverted" << endl;
+        ldbg << "Robot Controller - controlRotation: speed inverted (clockwise)" << endl;
         isSpeedChanged = TRUE;
         countSpeedChange++;
     }
@@ -1478,7 +1454,8 @@ void RobotController::controlRotationPosNeg()
 
 void RobotController::controlRotationNegNeg(double distance)
 {
-    if (actualState->getLeftSpeed() < 0){
+    if (actualState->getLeftSpeed() < 0)
+    {
         isSpeedChanged = true;
         countSpeedChange++;
     }
@@ -1495,25 +1472,25 @@ void RobotController::controlRotation(const Action &rotation) {
     {
         //In this case i have a rotation, but the robot is performing a rotation
         //Check if i finish the desired rotation
-        //ldbg << "Robot Controller - ControlRotation: Action value = " << fromRadiantToDegree(rotation.getValue()) << endl;
-        //ldbg << "Robot Controller - controlRotation: Actual angle = " << fromRadiantToDegree(actualState->getPose().getTheta())<<endl;
+        ldbg << "Robot Controller - ControlRotation: Action value = " << fromRadiantToDegree(rotation.getValue()) << endl;
+        ldbg << "Robot Controller - controlRotation: Actual angle = " << fromRadiantToDegree(actualState->getPose().getTheta())<<endl;
 
         double angleToReach = pastState->getPose().getTheta() + rotation.getValue();
 
-        //ldbg << "Robot Controller - controlRotation: Real angle to reach = "<< fromRadiantToDegree(angleToReach) << endl;
+        ldbg << "Robot Controller - controlRotation: Real angle to reach = "<< fromRadiantToDegree(angleToReach) << endl;
 
         angleToReach = wrapRad(angleToReach);
 
         double performedAngle =  actualState->getPose().getTheta();
         double distance = angularDistance(performedAngle, angleToReach);
 
-        //ldbg << "Robot Controller - controlRotation: Angular distance = "<< distance <<endl;
+        ldbg << "Robot Controller - controlRotation: Angular distance = "<< distance <<endl;
 
         if((fabs(distance) <= ANGLE_TOL && !isJustChanged) || constantPoseCounter >= STALL_LIMIT || countSpeedChange > STALL_LIMIT)
         {
             if(constantPoseCounter>=STALL_LIMIT || countSpeedChange > STALL_LIMIT)
             {
-                //ldbg<<"Robot Controller - Robot can't move, restart!!!"<<endl;
+                ldbg<<"Robot Controller - Robot can't move, restart!!!"<<endl;
                 controlRotationRobotStall();
                 return;
             }
@@ -1521,8 +1498,6 @@ void RobotController::controlRotation(const Action &rotation) {
             controlRotationSetPointReached();
 
         }
-        //        else if(fabs(distance) <= 2*ANGLE_TOL && !isJustChanged)
-        //            controlRotationNearToSetPoint(distance);
         else if(distance < 0 && rotation.getValue() > 0 && !isJustChanged)
             controlRotationNegPos();
         else if (distance > 0 && rotation.getValue() > 0 && !isJustChanged)
@@ -1534,29 +1509,25 @@ void RobotController::controlRotation(const Action &rotation) {
     }
 }
 
-void RobotController::controlTraslationNewAction(const Action &todo)
+void RobotController::controlTraslationNewAction(const Action &traslation)
 {
-    constantPoseCounter=0;
-    //If it is rotating or if it is stopped
-    //He must start a movement
+    constantPoseCounter = 0;
+
     //ldbg << "Robot Controller - controlTranslation: Inizio traslazione. Todo vale " << todo.getValue() << endl;
-    if(todo.getValue()>0)
+    if(traslation.getValue()>0)
     {
         //ldbg << "Robot Controller - controlTranslation: Devo andare avanti di: "<< todo.getValue()<<endl;
-        if(todo.getValue() <= LOW_SPEED_LIMIT_TRASL){
+        if(traslation.getValue() <= LOW_SPEED_LIMIT_TRASL)
             doMovement(MED_SPEED, MED_SPEED);
-        }
         else
-        {
             doMovement(HIGH_SPEED, HIGH_SPEED);
-        }
     }
     else
     {
         //ldbg << "Robot Controller - controlTranslation: Devo andare indietro di: "<< todo.getValue()<<endl;
-        if(todo.getValue() >= -LOW_SPEED_LIMIT_TRASL){
+        if(traslation.getValue() >= -LOW_SPEED_LIMIT_TRASL)
             doMovement(-MED_SPEED, -MED_SPEED);
-        } else
+        else
             doMovement(-HIGH_SPEED, -HIGH_SPEED);
     }
     isSpeedChanged = FALSE;
@@ -1579,56 +1550,10 @@ void RobotController::controlTraslationSetPointReached()
 
     delete pastState;
     pastState = newState;
-    ////ldbg << "controlTranslation: Spilo traslazione" << endl;
-    //recall this method to check if i need to do another action
+
     isJustChanged = TRUE;
     newAction = TRUE;
     onStateUpdated();
-}
-
-void RobotController::controlTraslationNearSetPoint(double distToCover, double distCovered)
-{
-    {
-        //The robot is approaching the set point. So i have to decrease the speed.
-        //ldbg << "Robot Controller - controlTranslation: I'm near to the set point. I decrease my movement speed!"<< endl;
-        double leftSpeed=actualState->getLeftSpeed();
-        double rightSpeed=actualState->getRightSpeed();
-        //velocit� troppo alta diminuisco
-        if(((fabs(leftSpeed))>MED_SPEED)){
-            leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
-            rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
-        }
-        else{
-            //non siamo ancora arrivati all'obiettivo
-            if((distCovered-fabs(distToCover))<0){
-                if(distToCover>0){
-                    leftSpeed=MED_SPEED;
-                    rightSpeed=MED_SPEED;
-                }
-                else{
-                    leftSpeed=-MED_SPEED;
-                    rightSpeed=-MED_SPEED;
-                }
-            }
-            //obiettivo superato
-            else
-            {
-                //ldbg<<"Robot controller - controlTraslation: Target passed"<<endl;
-                isSpeedChanged = TRUE;
-                if(distToCover>0){
-                    leftSpeed=-MED_SPEED;
-                    rightSpeed=-MED_SPEED;
-                }
-                else{
-                    leftSpeed=MED_SPEED;
-                    rightSpeed=MED_SPEED;
-                }
-            }
-        }
-
-        doMovement(leftSpeed, rightSpeed);
-        //
-    }
 }
 
 void RobotController::controlTraslationTooFar()
@@ -1637,20 +1562,18 @@ void RobotController::controlTraslationTooFar()
     //PRM
     double leftSpeed=actualState->getLeftSpeed();
     double rightSpeed=actualState->getRightSpeed();
-    if(((fabs(leftSpeed))>MED_SPEED)){
-        leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
-    }
-    else{
-        leftSpeed=-MED_SPEED;
-    }
-    if(fabs(rightSpeed)>=MED_SPEED){
-        rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
-    }
-    else{
-        rightSpeed=-MED_SPEED;
-    }
-    doMovement(leftSpeed, rightSpeed);
-    //
+
+    if(((fabs(leftSpeed))>MED_SPEED))
+        leftSpeed = leftSpeed * SPEED_DECR_FACTOR;
+    else
+        leftSpeed = MED_SPEED;
+
+    if(fabs(rightSpeed)>MED_SPEED)
+        rightSpeed = rightSpeed * SPEED_DECR_FACTOR;
+    else
+        rightSpeed = MED_SPEED;
+
+    doMovement(-leftSpeed, -rightSpeed);
     isSpeedChanged = TRUE;
 }
 
@@ -1659,41 +1582,18 @@ void RobotController::controlTraslationTooBack()
     //PRM
     double leftSpeed=actualState->getLeftSpeed();
     double rightSpeed=actualState->getRightSpeed();
-    if(abs(leftSpeed)>MED_SPEED){
+
+    if(abs(leftSpeed)>MED_SPEED)
         leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
-    }
-    else{
+    else
         leftSpeed=MED_SPEED;
-    }
     if(abs(rightSpeed)>MIN_SPEED)
-    {
         rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
-    }
-    else{
+    else
         rightSpeed=MED_SPEED;
-    }
+
     doMovement(leftSpeed, rightSpeed);
     isSpeedChanged = FALSE;
-}
-
-void RobotController::controlTraslationStall(double distCovered, const Action &todo, double distToCover)
-{
-    if(todo.getValue()>0){
-        if(fabs(distToCover)-distCovered > 0){
-            doMovement(HIGH_SPEED, HIGH_SPEED);
-        }
-        else{
-            doMovement(-HIGH_SPEED, -HIGH_SPEED);
-        }
-    }
-    else{
-        if(fabs(distToCover)-distCovered > 0){
-            doMovement(-HIGH_SPEED, -HIGH_SPEED);
-        }
-        else{
-            doMovement(HIGH_SPEED, HIGH_SPEED);
-        }
-    }
 }
 
 void RobotController::controlTranslation(const Action &traslation)
@@ -1721,18 +1621,13 @@ void RobotController::controlTranslation(const Action &traslation)
         }
         else if (distToCover - distCovered < -TRASL_TOL && !isSpeedChanged)
         {
-            ldbg <<"controlTranslation: Ho superato il set point!"<<endl;
+            ldbg <<"RobotController - controlTranslation: I'm going too far' !"<<endl;
             controlTraslationTooFar();
         }
         else if(distToCover - distCovered > TRASL_TOL  && !isSpeedChanged)
         {
-            ldbg <<"controlTranslation: Sono ancora troppo indietro?"<<endl;
+            ldbg <<"RobotController - controlTranslation: continue movement."<<endl;
             controlTraslationTooBack();
-        }
-        else if(actualState->getLeftSpeed()==0)
-        {
-            //ldbg <<"controlTranslation: Sono fermo....reset della velocit�"<<endl;
-            controlTraslationStall(distCovered, traslation, distToCover);
         }
     }
 }
@@ -1742,7 +1637,7 @@ void RobotController::onRestartExploration()
     //ldbg << "Robot Controller - onRestartExploration: userEnabled? " << userEnabled << endl;
     if(userEnabled)
     {
-        //ldbg <<"Robot Controller: restart Exploration"<<endl;
+        ldbg <<"Robot Controller: restart Exploration"<<endl;
         emit sigChangeStatetExplorationRCM(true);
         emit sigChangeStatePathPlanningRCM(true);
     }
