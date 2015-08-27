@@ -74,7 +74,8 @@ SOURCES += \
 #    logic/fann_cascade.c \
     logic/inversekinematiccf.cpp \
     logic/inversekinematic.cpp \
-    logic/airrobot.cpp
+    logic/airrobot.cpp \
+    logic/obstacleavoidancehandler.cpp
 
 HEADERS  += \
     logic/robot.h \
@@ -102,7 +103,8 @@ HEADERS  += \
 #    logic/config.h \
     logic/inversekinematiccf.h \
     logic/inversekinematic.h \
-    logic/airrobot.h
+    logic/airrobot.h \
+    logic/obstacleavoidancehandler.h
 
 OTHER_FILES += \
     Doxyfile \

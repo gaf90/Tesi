@@ -27,18 +27,9 @@
 #include <QTimer>
 #include <QTime>
 #include "data/sonardata.h"
+#include "logic/obstacleavoidancehandler.h"
 
 #define TELEOPERATION_TIMEOUT_MSEC  5000
-
-#define THRESHOLD 0.23
-#define RUOTASINISTRA_MIN 10
-#define RUOTASINISTRA_MED 20
-#define RUOTASINISTRA_MAX 40
-#define RUOTADESTRA_MIN -10
-#define RUOTADESTRA_MED -20
-#define RUOTADESTRA_MAX -40
-#define VAI_AVANTI 0.5
-#define VAI_INDIETRO -0.2
 
 #define ANGLE_TOL 0.1
 #define TRASL_TOL 0.1
@@ -49,8 +40,6 @@
 #define OBSTACLE_DYNAMIC true
 #define OBSTACLE_NEURAL false
 
-#define RADIUS_LOCAL 1
-#define SEARCH_SPACE_GRANULARITY 360
 /**
  * This class represents the logic for the robot.
  * It is the class that analyzes the data and takes the
@@ -65,8 +54,6 @@ class RobotController : public QObject
 public:
 
     int wayPointCounter;
-    int reactiveFrontBehaviorStatus;
-    int reactiveBackBehaviorStatus;
 
     /**
      * Constructor for the RobotController
@@ -76,14 +63,6 @@ public:
      * Destructor for the RobotController.
      */
     virtual ~RobotController();
-    /**
-     * This method represents the high-level primitives for the robot's movement.
-     * The primitive is composed of a Rotation, a Translation and a final rotation.
-     * @param angle1 how many degrees the robot must rotate for the initial rotation.
-     * @param translation how many metres the robot must translate.
-     * @param angle2 how many degrees the robot must rotate for the last rotation.
-     */
-    void moveRobot(double angle1, double translation, double angle2);
 
     /**
       * Return the actual state of the robot.
@@ -96,15 +75,6 @@ public:
     void setStatus(bool enable);
 
     void timerPart();
-    void handleFrontSonarData(const Data::SonarData &sonar);
-    void handleBackSonarData(const Data::SonarData &sonar);
-    void obstacleAvoidanceEmpiricHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL);
-    int getActualMovement(double ls, double rs);
-    int changeReactiveFSM(int);
-    void handleFrontObstacle(const Data::SonarData &sonar);
-    void tryReachWaypoint();
-    void tryRefindPathFrontier();
-    void handleBackObstacle(const Data::SonarData &sonar);
     void handleWheelMotionMessage(const Data::BuddyMessage *buddy);
     void onStateUpdatedHybrid(bool isIdle);
     void onStateUpdatedHybrid();
@@ -123,17 +93,6 @@ public:
     void controlTraslationTooFar();
     void controlTraslationTooBack();
     void controlTraslationStall(double distCovered, const Data::Action &todo, double distToCover);
-    QVector<QPair<double,double> > calculateSearchSpace(const Data::SonarData &sonar);
-    QVector<QPair<double, double> > calculateInitialSearchSpace();
-    QVector<Data::Pose> getPoseFromSearchSpace(QVector<QPair<double,double> > searchSpace);
-    QVector<QPair<double,double> >  getReachableSearchSpace(QVector<QPair<double,double> > searchSpace);
-    int calculateBestVelocity(QVector<QPair< double,double> > searchSpace);
-    int calculateVelocity(QVector<QPair< double,double> > searchSpace);
-    int calculateTargetHeading(QVector<QPair< double,double> > searchSpace);
-    QVector<QPair<QPair<double,double>,int> > getLocalMap(const Data::Pose actualPose);
-
-    void oldDynamic(const Data::SonarData &sonar);
-    QVector<QPair<double, double> > getLocalReachableSearchSpace(QVector<QPair<QPair<double,double>,int> > localMap);
 private:
    //=== Movement Helper ===//
    /**
@@ -142,11 +101,7 @@ private:
     * @param rightWheel the speed of the right wheel.
     */
    void doMovement(double leftSpeed, double rightSpeed);
-   /**
-    * This method stops the robot movement.
-    * @param saveState if <b>true</b> stores the actual state in the pastState's stack.
-    */
-   void stopRobot(bool saveState);
+
    /**
     * Fake method for the OpenLoop. It is not implemented.
     */
@@ -212,9 +167,6 @@ private:
     * This method handles the data received from the sonar of the robot.
     * @param sonar the data obtained from the sonar.
     */
-   void handleEmpiricSonarData(const Data::SonarData &sonar);
-   void handleDynamicWindowSonarData(const Data::SonarData &sonar);
-   void handleNeuralSonarData(const Data::SonarData &sonar);
 
    void handleWirelessData(const Data::Message &data);
 
@@ -287,6 +239,13 @@ public slots:
 
     void onPointToReachRCM(double x, double y);
 
+
+    void setActionStartTimestamp(int value);
+    void setControlType(int type);
+    void setLastSonarData(Data::SonarData sonar);
+    void stopRobot(bool saveState);
+    void moveRobot(double angle1, double translation, double angle2);
+
 private slots:
 
     void onRestartExploration();
@@ -297,16 +256,13 @@ private slots:
     void onTimeoutTeleoperation();
 
 private:
-    Data::Pose forwardKinematics(const Data::Pose &from, double vr, double vl);
+    Data::Pose forwardKinematics(const Data::Pose &from, double vr, double vl, double time);
     bool poseReached(const Data::Pose &pose) const;
     void sendSonarMessage();
 
 private:
 
-    enum reactiveBehaviorEnum {DEACTIVATED,FIRSTTIME,EXEC};
     enum typeMovementEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
-    enum movementStateEnum {FRONT,RIGHT,LEFT,BACK,STOP};
-    movementStateEnum actualMovement ;
     enum controlTypeEnum {HYBRID,NORMAL};
     controlTypeEnum controlRobotType;
     enum robotTypeEnum{P3AT,KENAF,OTHER};
@@ -352,12 +308,14 @@ private:
     Data::WaypointCommand *actualWaypoint;
 
     QMutex *streamMutex;
-    InverseKinematic *inverseKinematicmModule;
+    InverseKinematic *inverseKinematicModule;
     QTimer *obstacleAvoidanceTimer, *randomActionTimer, *teleOperationTimer;
     QTime crono;
 
     SLAM::SLAMModule *slam;
     PathPlanner::HybridPoseAction *goalToRecompute;
+
+    ObstacleAvoidance *obstacleAvoidance;
 
     QString space;
 };

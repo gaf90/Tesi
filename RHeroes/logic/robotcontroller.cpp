@@ -22,6 +22,7 @@
 
 
 
+
 using namespace Data;
 using namespace PathPlanner;
 using namespace SLAM::Geometry;
@@ -45,9 +46,7 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     isNotificationNeeded(false),
     haveReceivedWaypoint(false),
     waitTime(0),
-    explorationModuleState(true),        //PRM
-    reactiveFrontBehaviorStatus(DEACTIVATED),
-    reactiveBackBehaviorStatus(DEACTIVATED),
+    explorationModuleState(true),
     constantPoseCounter(0),
     stallCounter(0),
     sonarObstacleTimeNumber(0),
@@ -66,7 +65,9 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
 
     //ldbg << "RobotController: Start module"<<endl;
 
-    inverseKinematicmModule = new InverseKinematicCF(WHEEL_BASE,aisKenaf);
+    inverseKinematicModule = new InverseKinematicCF(WHEEL_BASE,aisKenaf);
+
+    obstacleAvoidance = new ObstacleAvoidance(inverseKinematicModule);
 
     if (aisKenaf)
         robotType = KENAF;
@@ -77,6 +78,15 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     connect(this, SIGNAL(sigRobotStateUpdated()), this, SLOT(onStateUpdated()), Qt::QueuedConnection);
     connect(obstacleAvoidanceTimer,SIGNAL(timeout()),this,SLOT(onTimeoutObstacle()), Qt::QueuedConnection);
     connect(teleOperationTimer,SIGNAL(timeout()),this,SLOT(onTimeoutTeleoperation()));
+
+    //New
+    connect(obstacleAvoidance, SIGNAL(sigChangeActionStartTimestamp(int)), this, SLOT(setActionStartTimestamp(int)), Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigUpdateSonarData(Data::SonarData)), this, SLOT(setLastSonarData(Data::SonarData)), Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigMoveRobot(double,double,double)), this, SLOT(moveRobot(double,double,double)), Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigChangeRobotControlType(int)), this, SLOT(setControlType(int)),Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigRestartExploration()), this, SLOT(onRestartExploration()),Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigStopRobot(bool)), this, SLOT(stopRobot(bool)),Qt::DirectConnection);
+
     teleOperationTimer->setSingleShot(true);
 
     refindPathCounter = 0;
@@ -113,7 +123,7 @@ RobotController::~RobotController()
         teleOperationTimer->stop();
     }
     delete teleOperationTimer;
-    delete inverseKinematicmModule;
+    delete inverseKinematicModule;
     delete actualState;
     delete pastState;
     //delete pastStates;
@@ -162,12 +172,16 @@ void RobotController::onSensorData(const Message &data)
     else if(typeid(data) == typeid(const SonarData &))
     {
         const SonarData &sonar = (const SonarData &)data;
+
+        const Data::Action *actualAction = NULL;
+        if (!normalActionQueue->isEmpty())
+            actualAction = normalActionQueue->head();
         if (OBSTACLE_EMPIRIC)
-            handleEmpiricSonarData(sonar);
+            obstacleAvoidance->handleEmpiricSonarData(sonar,actualState,actualAction,actualFrontier);
         else if (OBSTACLE_DYNAMIC)
-            handleDynamicWindowSonarData(sonar);
+            obstacleAvoidance->handleDynamicWindowSonarData(sonar,actualState,actualAction,actualFrontier);
         else if (OBSTACLE_NEURAL)
-            handleNeuralSonarData(sonar);
+            obstacleAvoidance->handleNeuralSonarData(sonar,actualState,actualAction,actualFrontier);
     }
     else if(typeid(data) == typeid(const WirelessMessage &))
     {
@@ -207,646 +221,7 @@ void RobotController::handleStateData(const Data::StateData &state)
     }
 }
 
-void RobotController::handleEmpiricSonarData(const Data::SonarData &sonar)
-{
-    ////ldbg << "Robot Controller: LeftSpeed  = " << actualState->getLeftSpeed()<<"; ";
-    ////ldbg << " RightSpeed = " << actualState->getRightSpeed()<<"; ";
 
-    actualMovement = (movementStateEnum)getActualMovement(actualState->getLeftSpeed(),actualState->getRightSpeed());
-
-    ldbg<<"Robot Controller: Actual movement = "<< actualMovement<<endl;
-
-    if(sonar.getPosition() == SonarData::Front && !(actualMovement == BACK))
-    {
-        //ldbg << "Robot Controller - empiric: Check front sonar."<<endl;
-        handleFrontSonarData(sonar);
-    }
-    else if(sonar.getPosition() == SonarData::Back && actualMovement == BACK)
-    {
-        //ldbg << "Robot Controller - empiric: Check back sonar."<<endl;
-        handleBackSonarData(sonar);
-    }
-
-}
-
-QVector<QPair<double, double> > RobotController::getLocalReachableSearchSpace(QVector<QPair<QPair<double,double>,int> > localMap)
-{
-    QVector<QPair<double,double> > searchSpace (SEARCH_SPACE_GRANULARITY);
-    for (int i=0; i<SEARCH_SPACE_GRANULARITY; i++)
-    {
-        QPair<double,double> nearestPoint = localMap[i].first;
-        Pose *nearestPose = new Pose(nearestPoint.first,nearestPoint.second, i);
-        WheelSpeeds ws = inverseKinematicmModule->computeSpeeds(*nearestPose,0.5);
-        searchSpace[i].first = ws.getLeftSpeed();
-        searchSpace[i].second = ws.getRightSpeed();
-    }
-
-    return searchSpace;
-}
-
-QVector<QPair<double,double> > RobotController::calculateSearchSpace(const Data::SonarData &sonar)
-{
-    //Get local set with nearest pose reachable for each index (angle).
-    QVector<QPair<QPair<double,double>,int> > localMap = getLocalMap(actualState->getPose());
-    QVector<QPair<double,double> > searchSpace = getLocalReachableSearchSpace(localMap);
-    return searchSpace;
-
-}
-
-int RobotController::calculateBestVelocity(QVector<QPair< double,double> > searchSpace)
-{
-    double distance = 0;
-    double targetHeading = 0;
-    double clearance = 0;
-    int bestValue = 0;
-    double bestCost = 0;
-
-    QVector<QPair<QPair<double,double>,int> > localMap = getLocalMap(actualState->getPose());
-
-    for(int counter = 0; counter < searchSpace.size()-1;counter++)
-    {
-        int dx = actualFrontier->getX()-localMap[counter].first.first;
-        int dy = actualFrontier->getY()-localMap[counter].first.second;
-        distance = sqrt(dx^2 -dy^2);
-        targetHeading = abs(actualFrontier->getTheta() - counter);
-        clearance = searchSpace[counter].first;
-        double cost = distance + clearance - targetHeading;
-        if (cost>=bestCost)
-        {
-            bestCost = cost;
-            bestValue = counter;
-        }
-    }
-
-
-
-    return bestValue;
-}
-
-QVector<QPair<QPair<double,double>,int> > RobotController::getLocalMap(const Pose actualPose)
-{
-    QVector<QPair<QPair<double,double>,int> > localMap (SEARCH_SPACE_GRANULARITY);
-    double actualX = actualPose.getX();
-    double actualY = actualPose.getY();
-    double radius = RADIUS_LOCAL;
-
-    //Search for all the direction (angle) the nearest pose that is reachable by the robot
-    for (double angle=0; angle<SEARCH_SPACE_GRANULARITY; angle++)
-    {
-        //Started from pose I go far until I find a pose unreachable
-        for (double step=0; step<1; step+=0.1)
-        {
-            double deltaX = actualX + step*radius*cos(angle);
-            double deltaY = actualY + step*radius*sin(angle);
-            Point* deltaPosePoint = new Point(deltaX, deltaY);
-            Point* actualPosePoint = new Point(actualX, actualY);
-            bool isReachable = slam->getMap().isReachable(*actualPosePoint, *deltaPosePoint, P3AT_RADIUS);
-            if (isReachable)
-            {
-                localMap[angle].second = radius/step;
-                localMap[angle].first.first = deltaX;
-                localMap[angle].first.second = deltaY;
-            }
-        }
-    }
-    return localMap;
-}
-
-void RobotController::handleDynamicWindowSonarData(const Data::SonarData &sonar)
-{
-
-    double leftSpeed = actualState->getLeftSpeed();
-    double rightSpeed = actualState->getRightSpeed();
-    Pose actualPose = actualState->getPose();
-    //ldbg << "Robot Controller - dynamic: LeftSpeed  = " << leftSpeed <<"; " <<endl;
-    //ldbg << "Robot Controller - dynamic: RightSpeed = " << rightSpeed<<"; "<<endl;
-    //ldbg << "Robot Controller - dynamic: I'm in (" << actualPose.getX() << ", " <<
-    //actualPose.getY() << ")" << endl;
-
-    actionStartTimestamp = -1;
-
-    actualMovement = (movementStateEnum)getActualMovement(actualState->getLeftSpeed(),actualState->getRightSpeed());
-
-    Pose predictedPose = forwardKinematics(actualPose,leftSpeed, rightSpeed);
-
-    //ldbg << "Robot Controller - dynamic: predicted pose is (" << predictedPose.getX() << ", " <<
-    // predictedPose.getY() << ")" << endl;
-
-    Point* predictedPosePoint = new Point(predictedPose.getX(), predictedPose.getY());
-    Point* actualPosePoint = new Point(actualPose.getX(),actualPose.getY());
-
-    bool isReachable = slam->getMap().isReachable(*actualPosePoint,*predictedPosePoint,P3AT_RADIUS);
-    if (!isReachable)
-    {
-        lastFrontSonarData = sonar;
-
-        //ldbg << "Robot Controller - dynamic: Start DWA."<<endl;
-
-        stopRobot(true);
-
-        QVector<QPair< double,double> > searchSpace = calculateSearchSpace(sonar);
-
-        int bestValue = calculateBestVelocity(searchSpace);
-        if (bestValue == -1)
-        {
-            //ldbg << "RobotController - dynamic: DWA failed." <<endl;
-            moveRobot(0,-VAI_AVANTI,0);
-        }
-        else
-        {
-            Pose bestPose = forwardKinematics(actualPose,searchSpace[bestValue].first,searchSpace[bestValue].second);
-            double trasl = bestPose.getDistance(actualPose);
-            //ldbg << "RobotController - dynamic: I must traslate of " << trasl << endl;
-            double rot = computeRotationFromPoses(actualPose,bestPose);
-            //ldbg << "RobotController - dynamic: I must rotate of " << rot << endl;
-            moveRobot(rot, trasl,0);
-        }
-        controlRobotType = NORMAL;
-
-    }
-    else
-    {
-        //ldbg<<"Robot controller - dynamic: No obstacle. ok! Normal action queue size is " << normalActionQueue->size() <<
-        //endl;
-
-        if (normalActionQueue->size()==0)
-        {
-            if(haveReceivedWaypoint)
-                tryReachWaypoint();
-            else
-                tryRefindPathFrontier();
-        }
-    }
-
-
-}
-
-void RobotController::handleNeuralSonarData(const Data::SonarData &sonar)
-{
-
-}
-
-void RobotController::handleFrontSonarData(const Data::SonarData &sonar)
-{
-    actionStartTimestamp = -1; //used by mladen to see how much time has passed to give the new control
-    ////ldbg << "Robot Controller: Using front "<< sonar.getMinSonarName() << ". He say: " << sonar.getMinDistance() << endl;
-
-    if (sonar.getMinDistance()<THRESHOLD)
-        handleFrontObstacle(sonar);
-    else
-    {
-        if (normalActionQueue->isEmpty() && reactiveFrontBehaviorStatus > DEACTIVATED)
-        {
-            reactiveFrontBehaviorStatus = DEACTIVATED;
-            ldbg <<"Robot controller: Nothing to do. Restart exploration!" << endl;
-            onRestartExploration();
-        }
-    }
-}
-
-int RobotController::getActualMovement(double leftSpeed, double rightSpeed)
-{
-    if (normalActionQueue->isEmpty())
-    {
-        if (leftSpeed >0 && rightSpeed<0)
-            return RIGHT;
-        if (leftSpeed<0 && rightSpeed>0)
-            return LEFT;
-        if (leftSpeed<0 && rightSpeed<0)
-            return BACK;
-        else
-            return FRONT;
-    }
-    else
-    {
-        Action *actualAction = normalActionQueue->head();
-        int type = actualAction->getType();
-        double value = actualAction->getValue();
-
-        ldbg << "Robot Controller: Next action to do is" << type << "with value " << value<<endl;
-
-        if (type == Action::Rotation && value>0)
-        {
-            ldbg << "Robot Controller: I'm rotating to right!"<<endl;
-            return RIGHT;
-        }
-        else if (type == Action::Rotation && value<0)
-        {
-            ldbg << "Robot Controller: I'm rotating to left!"<<endl;
-            return LEFT;
-        }
-        else if (type == Action::Translation && value<0)
-        {
-            ldbg << "Robot Controller: I'm moving backward!"<<endl;
-            return BACK;
-        }
-        else
-        {
-            ldbg << "Robot Controller: I'm going straight" <<endl;
-            return FRONT;
-        }
-    }
-}
-
-
-void RobotController::handleFrontObstacle(const Data::SonarData &sonar)
-{
-    double distanceLeftL = sonar.getFront(0);
-    double distanceLeft = sonar.getFront(1);
-    double distanceFront = sonar.getFront(2);
-    double distanceRight = sonar.getFront(3);
-    double distanceRightR = sonar.getFront(4);
-
-    if (reactiveFrontBehaviorStatus == DEACTIVATED)
-    {
-        stopRobot(true);
-        //ldbg << "RobotController - Empiric FSM: DEACTIVATED to FIRSTTIME."<<endl;
-        reactiveFrontBehaviorStatus = FIRSTTIME;
-    }
-
-    if (reactiveFrontBehaviorStatus > DEACTIVATED)
-    {
-        lastFrontSonarData = sonar;
-
-        if (robotType == P3AT)
-            slowMotion = true;
-
-        obstacleAvoidanceEmpiricHandler(distanceRightR, distanceLeftL, distanceLeft, distanceFront, distanceRight);
-    }
-
-    controlRobotType = NORMAL;
-}
-
-void RobotController::tryReachWaypoint()
-{
-    if (wayPointCounter<3)
-    {
-        //ldbg<<"Robot Controller: I have a waypoint. I'm trying " <<wayPointCounter <<endl;
-        wayPointCounter++;
-        handleWaypoint(actualWaypoint);
-    }
-    else
-    {
-        //ldbg<<"Robot Controller: I can't reach the waypoint."<<endl;
-        delete actualWaypoint;
-        sendSonarMessage();
-        haveReceivedWaypoint = false;
-        stopRobot(true);
-    }
-}
-
-void RobotController::tryRefindPathFrontier()
-{
-    //ldbg<<"Robot Controller: OldFrontier is ( "<<oldFrontier->x()<<" , "<<oldFrontier->y() << endl;
-    if (refindPathCounter<3 ||!(actualState->getPose().getX()==actualFrontier->y() &&actualState->getPose().getY()==actualFrontier->x()))
-    {
-        refindPathCounter++;
-        //ldbg<<"Robot Controller: Tempt number "<< refindPathCounter <<". Refind path to ("<<actualFrontier->x()<<" , "<<actualFrontier->y() << endl;
-        emit sigRestartExplorationRCM(actualFrontier->x(), actualFrontier->y());
-    }
-    else
-    {
-        //ldbg<<"Robot Controller: restart exploration."<<endl;
-        onRestartExploration();
-    }
-}
-
-void RobotController::obstacleAvoidanceEmpiricHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL)
-{
-    if (distanceLeftL < THRESHOLD)
-    {
-        if (distanceLeft < THRESHOLD)
-        {
-            if (distanceFront < THRESHOLD)
-            {
-                if (distanceRight < THRESHOLD)
-                {
-                    if (distanceRightR < THRESHOLD)
-                    {
-                        if (reactiveFrontBehaviorStatus == FIRSTTIME)
-                        {
-                            reactiveFrontBehaviorStatus = EXEC;
-                            ldbg <<"Caso LL_L_F_R_RR: Ostacoli ovunque"<<endl;
-                            moveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
-                            typeMovement = LLLFRRR;
-                            //ldbg<< typeMovement <<endl;
-                        }
-                        else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLLFRRR)
-                        {
-                            //ldbg << "Typemovement was LLLFRRR. Now is" << typeMovement <<endl;
-                            reactiveFrontBehaviorStatus = DEACTIVATED;
-                        }
-                    }
-                    else
-                    {
-                        if (reactiveFrontBehaviorStatus == FIRSTTIME)
-                        {
-                            reactiveFrontBehaviorStatus = EXEC;
-                            ldbg <<"Caso LL_L_F_R: Estrema destra libera"<<endl;
-                            moveRobot(0,VAI_INDIETRO,0);
-                            moveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
-                            typeMovement = LLLFR;
-                            //ldbg<< typeMovement <<endl;
-                        }
-                        else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLLFR)
-                        {
-                            //ldbg << "Typemovement was LLLFR. Now is" << typeMovement <<endl;
-                            reactiveFrontBehaviorStatus = DEACTIVATED;
-                        }
-                    }
-                }
-                else
-                {
-                    if (reactiveFrontBehaviorStatus == FIRSTTIME)
-                    {
-                        reactiveFrontBehaviorStatus = EXEC;
-                        ldbg <<"Caso LL_L_F: Destra libera"<<endl;
-                        moveRobot(0,VAI_INDIETRO,0);
-                        moveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
-                        typeMovement = LLLF;
-                        //ldbg<< typeMovement <<endl;
-                    }
-                    else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLLF)
-                    {
-                        //ldbg << "Typemovement was LLLF. Now is" << typeMovement <<endl;
-                        reactiveFrontBehaviorStatus = DEACTIVATED;
-                    }
-                }
-            }
-            else
-            {
-                if (reactiveFrontBehaviorStatus == FIRSTTIME)
-                {
-                    reactiveFrontBehaviorStatus = EXEC;
-                    ldbg <<"Caso LL_L: Sinistra occupata"<<endl;
-                    moveRobot(0,VAI_INDIETRO,0);
-                    moveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
-                    typeMovement = LLL;
-                    //ldbg<< typeMovement <<endl;
-                }
-                else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLL)
-                {
-                    //ldbg << "Typemovement was LLL. Now is" << typeMovement <<endl;
-                    reactiveFrontBehaviorStatus = DEACTIVATED;
-                }
-            }
-        }
-        else
-        {
-            if (reactiveFrontBehaviorStatus == FIRSTTIME)
-            {
-                reactiveFrontBehaviorStatus = EXEC;
-                ldbg <<"Caso LL: Sinistra occupata"<<endl;
-                moveRobot(0,VAI_INDIETRO,0);
-                moveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
-                typeMovement = LL;
-                //ldbg<< typeMovement <<endl;
-            }
-            else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LL)
-            {
-                //ldbg << "Typemovement was LL. Now is" << typeMovement <<endl;
-                reactiveFrontBehaviorStatus = DEACTIVATED;
-            }
-        }
-    }
-    else if (distanceLeft < THRESHOLD)
-    {
-        if (distanceFront < THRESHOLD)
-        {
-            if (distanceRight < THRESHOLD)
-            {
-                if (distanceRightR < THRESHOLD)
-                {
-                    if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=LFRRR)
-                    {
-                        reactiveFrontBehaviorStatus = EXEC;
-                        ldbg <<"Caso L_F_R_RR: Possibile pertugio estrema sinistra"<<endl;
-                        moveRobot(0,VAI_INDIETRO,0);
-                        moveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
-                        typeMovement = LFRRR;
-                        //ldbg<< typeMovement <<endl;
-                    }
-                    else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LFRRR)
-                    {
-                        //ldbg << "Typemovement was LFRR. Now is" << typeMovement <<endl;
-                        reactiveFrontBehaviorStatus = DEACTIVATED;
-                    }
-                }
-                else
-                {
-                    if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=LFR)
-                    {
-                        reactiveFrontBehaviorStatus = EXEC;
-                        ldbg <<"Caso L_F_R: Estremi liberi. Vado indietro"<<endl;
-                        moveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
-                        typeMovement = LFR;
-                        //ldbg<< typeMovement <<endl;
-                    }
-                    else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LFR)
-                    {
-                        //ldbg << "Typemovement was LFR. Now is" << typeMovement <<endl;
-                        reactiveFrontBehaviorStatus = DEACTIVATED;
-                    }
-                }
-            }
-            else
-            {
-                if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=LF)
-                {
-                    reactiveFrontBehaviorStatus = EXEC;
-                    ldbg <<"Caso L_F: Destra libera"<<endl;
-                    moveRobot(0,VAI_INDIETRO,0);
-                    moveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
-                    typeMovement = LF;
-                    //ldbg<< typeMovement <<endl;
-                }
-                else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LF)
-                {
-                    //ldbg << "Typemovement was LF. Now is" << typeMovement <<endl;
-                    reactiveFrontBehaviorStatus = DEACTIVATED;
-                }
-            }
-        }
-        else
-        {
-            if (reactiveFrontBehaviorStatus == FIRSTTIME)
-            {
-                reactiveFrontBehaviorStatus = EXEC;
-                ldbg <<"Caso L: Sinistra occupata"<<endl;
-                moveRobot(0,VAI_INDIETRO,0);
-                moveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
-                typeMovement = L;
-                //ldbg<< typeMovement <<endl;
-            }
-            else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=L)
-            {
-                //ldbg << "Typemovement was L. Now is" << typeMovement <<endl;
-                reactiveFrontBehaviorStatus = DEACTIVATED;
-            }
-
-        }
-    }
-    else if (distanceFront < THRESHOLD)
-    {
-        if (distanceRight < THRESHOLD)
-        {
-            if (distanceRightR < THRESHOLD)
-            {
-                if (reactiveFrontBehaviorStatus == FIRSTTIME)//&& typeMovement!=FRRR)
-                {
-                    reactiveFrontBehaviorStatus = EXEC;
-                    ldbg <<"Caso F_R_RR: Sinistra libera"<<endl;
-                    moveRobot(0,VAI_INDIETRO,0);
-                    moveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
-                    typeMovement = FRRR;
-                    //ldbg<< typeMovement <<endl;
-                }
-                else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=FRRR)
-                {
-                    //ldbg << "Typemovement was FRR. Now is" << typeMovement <<endl;
-                    reactiveFrontBehaviorStatus = DEACTIVATED;
-                }
-            }
-            else
-            {
-                if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=FR)
-                {
-                    reactiveFrontBehaviorStatus = EXEC;
-                    ldbg <<"Caso F_R: Sinistra libera"<<endl;
-                    moveRobot(0,VAI_INDIETRO,0);
-                    moveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
-                    typeMovement = FR;
-                    //ldbg<< typeMovement <<endl;
-                }
-                else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=FR)
-                {
-                    //ldbg << "Typemovement was FR. Now is" << typeMovement <<endl;
-                    reactiveFrontBehaviorStatus = DEACTIVATED;
-                }
-            }
-        }
-        else
-        {
-
-            if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=F)
-            {
-                reactiveFrontBehaviorStatus = EXEC;
-                ldbg <<"Caso F: Caso indecisione. Vado indietro."<<endl;
-                moveRobot(0,VAI_INDIETRO,RUOTADESTRA_MIN);
-                typeMovement = F;
-                //ldbg<< typeMovement <<endl;
-            }
-            else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=F)
-            {
-                //ldbg << "Typemovement was F. Now is" << typeMovement <<endl;
-                reactiveFrontBehaviorStatus = DEACTIVATED;
-            }
-        }
-    }
-    else if (distanceRight < THRESHOLD)
-    {
-        if (distanceRightR < THRESHOLD)
-        {
-            if (reactiveFrontBehaviorStatus == FIRSTTIME)//&& typeMovement!=RRR)
-            {
-                reactiveFrontBehaviorStatus = EXEC;
-                ldbg <<"Caso R_RR: Sinistra libera"<<endl;
-                moveRobot(0,VAI_INDIETRO,0);
-                moveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
-                typeMovement = RRR;
-                //ldbg<< typeMovement <<endl;
-            }
-            else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=RRR)
-            {
-                //ldbg << "Typemovement was RRR. Now is" << typeMovement <<endl;
-                reactiveFrontBehaviorStatus = DEACTIVATED;
-            }
-        }
-        else
-        {
-            if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=R)
-            {
-                reactiveFrontBehaviorStatus = EXEC;
-                ldbg <<"Caso R: Sinistra libera"<<endl;
-                moveRobot(0,VAI_INDIETRO,0);
-                moveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
-                typeMovement = R;
-                //ldbg<< typeMovement <<endl;
-            }
-            else if(reactiveFrontBehaviorStatus == EXEC  && typeMovement!=R)
-            {
-                //ldbg << "Typemovement was R. Now is" << typeMovement <<endl;
-                reactiveFrontBehaviorStatus = DEACTIVATED;;
-            }
-        }
-    }
-    else if (distanceRightR < THRESHOLD)
-    {
-        if (reactiveFrontBehaviorStatus == FIRSTTIME)//&& typeMovement!=RR)
-        {
-            reactiveFrontBehaviorStatus = EXEC;
-            ldbg <<"Caso_RR: Sinistra libera"<<endl;
-            moveRobot(0,VAI_INDIETRO,0);
-            moveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
-            typeMovement = RR;
-            //ldbg<< typeMovement <<endl;
-        }
-        else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=RR)
-        {
-            //ldbg << "Typemovement was RR. Now is" << typeMovement <<endl;
-            reactiveFrontBehaviorStatus = DEACTIVATED;
-        }
-    }
-    else
-        ldbg<<"Waiting movement typeMovement" << typeMovement << endl;
-}
-
-void RobotController::handleBackObstacle(const Data::SonarData &sonar)
-{
-
-    double distanceLeftL = sonar.getBack(0);
-    double distanceLeft = sonar.getBack(1);
-    double distanceFront = sonar.getBack(2);
-    double distanceRight = sonar.getBack(3);
-    double distanceRightR = sonar.getBack(4);
-
-    //ldbg << "Robot Controller: BRR vale " << distanceRightR<<endl;
-    //ldbg << "Robot Controller: BR vale " << distanceRight<<endl;
-    //ldbg << "Robot Controller: B " << distanceFront<<endl;
-    //ldbg << "Robot Controller: BL " << distanceLeft<<endl;
-    //ldbg << "Robot Controller: BLL " << distanceLeftL<<endl;
-
-
-    if (reactiveBackBehaviorStatus == DEACTIVATED)
-    {
-        stopRobot(true);
-        //ldbg << "RobotController: DEACTIVATED to FIRSTTIME."<<endl;
-        reactiveBackBehaviorStatus = FIRSTTIME;
-    }
-
-    Pose actualPose = actualState->getPose();
-    //ldbg << "Robot Controller: Actual Pose ( " << actualPose.getX() << " , " << actualPose.getY() << " , " <<fromRadiantToDegree(actualPose.getTheta())<<endl;
-    //ldbg<< "Robot Controller: reactiveBehavior"<<reactiveBackBehaviorStatus<<endl;
-
-
-    if (reactiveBackBehaviorStatus == FIRSTTIME)
-    {
-        reactiveBackBehaviorStatus = EXEC;
-        moveRobot(0,VAI_AVANTI,0);
-    }
-}
-
-void RobotController::handleBackSonarData(const Data::SonarData &sonar)
-{
-    QString sonarName = sonar.getMinSonarName();
-    //ldbg << "Robot Controller: Using back "<< sonarName << ". He say: " << sonar.getMinBackDistance() << endl;
-    if(sonar.getMinBackDistance()<THRESHOLD)
-        handleBackObstacle(sonar);
-    else if (reactiveBackBehaviorStatus  == DEACTIVATED && normalActionQueue->size()==0)
-    {
-        onRestartExploration();
-    }
-}
 
 void RobotController::handleWheelMotionMessage(const BuddyMessage *buddy)
 {
@@ -993,7 +368,7 @@ void RobotController::insertActionToPerform(Action::ActionType type, double valu
 void RobotController::onPerformActionRCM(PathPlanner::AbstractAction *action)
 {
     sonarStatus = ON;
-    if (reactiveFrontBehaviorStatus == EXEC && normalActionQueue->size()!=0)
+    if (obstacleAvoidance->reactiveFrontBehaviorStatus >0 && normalActionQueue->size()!=0)
     {
         ldbg << "Robot Controller: Ignore perform action" << endl;
         return;
@@ -1199,7 +574,7 @@ void RobotController::onStateUpdated()
             stopRobot(false);
             emit sigChangeStatetExplorationRCM(true);
         }
-        if (haveReceivedWaypoint && reactiveFrontBehaviorStatus == DEACTIVATED)
+        if (haveReceivedWaypoint && obstacleAvoidance->reactiveFrontBehaviorStatus == 0)
             notifyAfterWaypoint();
     }
     isJustChanged = FALSE;
@@ -1250,7 +625,7 @@ void RobotController::onStateUpdatedHybrid()
         if(timeLeft < DELTA_T/5)
             timeLeft = DELTA_T/5;
 
-        WheelSpeeds ws = inverseKinematicmModule->computeSpeeds(displacedPose, timeLeft);
+        WheelSpeeds ws = inverseKinematicModule->computeSpeeds(displacedPose, timeLeft);
 
         //ldbg << "Robot Controller: action value = " << act->getValue() << endl;
         //ldbg << "Robot Controller: Speeds: left = " << ws.getLeftSpeed() <<", right = " << ws.getRightSpeed() << endl;
@@ -1797,6 +1172,7 @@ void RobotController::onPerformRandomAction()
 void RobotController::setSlamModule(SLAM::SLAMModule *slam)
 {
     this->slam = slam;
+    obstacleAvoidance->setSlamModule(slam);
 }
 
 void RobotController::setStatus(bool status)
@@ -1812,24 +1188,6 @@ void RobotController::setStatus(bool status)
         emit sigChangeStatePathPlanningRCM(false);
         onStopRobotForPlanning();
     }
-}
-
-Data::Pose RobotController::forwardKinematics(const Data::Pose &from, double vr, double vl)
-{
-    const double dt = DELTA_T, L = WHEEL_BASE;
-    double x, y, theta;
-    if(almostEqual(vl, vr)) {
-        x = from.x() - vr * DELTA_T * sin(from.theta());
-        y = from.y() + vr * DELTA_T * cos(from.theta());
-        theta = from.theta();
-    } else {
-        const double R = .5 * L * (vr + vl) / (vr - vl);
-        const double w = (vr - vl) / L;
-        x = from.x() + R * std::cos(from.theta() + w * dt) - R * std::cos(from.theta());
-        y = from.y() + R * std::sin(from.theta() + w * dt) - R * std::sin(from.theta());
-        theta = wrapRad(from.theta() + w * dt);
-    }
-    return Data::Pose(x, y, theta);
 }
 
 void RobotController::onFrontierToReachRCM(const Pose frontier)
@@ -1853,3 +1211,19 @@ void RobotController::onPointToReachRCM(double x, double y)
     wayPointCounter = 0;
     handleWaypoint(&wpCmd);
 }
+
+void RobotController::setActionStartTimestamp(int value)
+{
+    this->actionStartTimestamp = value;
+}
+
+void RobotController::setLastSonarData(Data::SonarData sonar)
+{
+    this->lastFrontSonarData = sonar;
+}
+
+void RobotController::setControlType(int type)
+{
+    this->controlRobotType = (controlTypeEnum)type;
+}
+
