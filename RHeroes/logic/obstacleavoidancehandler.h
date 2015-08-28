@@ -44,6 +44,11 @@ public:
     void handleNeuralSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
     void handleEmpiricSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
     void handleDynamicWindowSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction,  Data::Pose *actualFrontier);
+
+public slots:
+    void setMovementType(int type);
+
+
 signals:
     void sigChangeActionStartTimestamp(int);
     void sigChangeRobotControlType(int);
@@ -61,8 +66,6 @@ private slots:
     void handleFrontSonarData(const Data::SonarData &sonar);
     int getActualMovement(double leftSpeed, double rightSpeed);
     void handleFrontObstacle(const Data::SonarData &sonar);
-    void tryReachWaypoint();
-    void tryRefindPathFrontier();
     void obstacleAvoidanceEmpiricHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL);
     void handleBackObstacle(const Data::SonarData &sonar);
     void handleBackSonarData(const Data::SonarData &sonar);
@@ -72,6 +75,7 @@ private:
     enum reactiveBehaviorEnum {DEACTIVATED,FIRSTTIME,EXEC};
     enum typeMovementEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
     enum movementStateEnum {FRONT,RIGHT,LEFT,BACK,STOP};
+    enum controlTypeEnum {HYBRID,NORMAL};
     movementStateEnum actualMovement;
     typeMovementEnum typeMovement;
 

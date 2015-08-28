@@ -205,6 +205,8 @@ signals:
 
     void sigHandleBadFrontierRCM(const Data::Pose);
 
+    void sigChangeMovementType(int);
+
 public slots:
     /**
      * This slot is invoked to handle the state update.
@@ -288,7 +290,6 @@ private:
     int waitTime;
     int constantPoseCounter, stallCounter;
     int counterAround, countSpeedChange;
-    int typeMovement;
     int refindPathCounter;
     int tryposeCounter;
 

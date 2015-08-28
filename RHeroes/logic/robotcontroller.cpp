@@ -86,6 +86,7 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     connect(obstacleAvoidance, SIGNAL(sigChangeRobotControlType(int)), this, SLOT(setControlType(int)),Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigRestartExploration()), this, SLOT(onRestartExploration()),Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigStopRobot(bool)), this, SLOT(stopRobot(bool)),Qt::DirectConnection);
+    connect(this, SIGNAL(sigChangeMovementType(int)), obstacleAvoidance, SLOT(setMovementType(int)),Qt::DirectConnection);
 
     teleOperationTimer->setSingleShot(true);
 
@@ -220,7 +221,6 @@ void RobotController::handleStateData(const Data::StateData &state)
 
     }
 }
-
 
 
 void RobotController::handleWheelMotionMessage(const BuddyMessage *buddy)
@@ -460,7 +460,7 @@ void RobotController::stopRobot(bool saveState)
     //ldbg << "RobotController: stop robot."<<endl;
 
     doMovement(0,0);
-    typeMovement = S;
+    emit sigChangeMovementType(S);
 
     if(saveState){
         saveRobotState();
@@ -743,7 +743,8 @@ void RobotController::controlRotationSetPointReached()
     //ldbg << "Robot Controller - Control Rotation: set point reached!" << endl;
 
     doMovement(0,0);
-    typeMovement = S;
+    emit sigChangeMovementType(S);
+
     delete normalActionQueue->dequeue();
 
     //Push the reached state into the states history
@@ -913,7 +914,7 @@ void RobotController::controlTraslationSetPointReached()
 {
 
     doMovement(0.0,0.0);
-    typeMovement = S;
+    emit sigChangeMovementType(S);
 
     delete normalActionQueue->dequeue();
 
