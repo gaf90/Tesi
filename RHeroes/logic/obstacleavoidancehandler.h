@@ -15,6 +15,10 @@
 #include <slam/slammodule.h>
 
 
+#define OBSTACLE_EMPIRIC false
+#define OBSTACLE_DYNAMIC true
+#define OBSTACLE_NEURAL false
+
 #define THRESHOLD 0.23
 #define RUOTASINISTRA_MIN 10
 #define RUOTASINISTRA_MED 20
@@ -26,8 +30,8 @@
 #define VAI_INDIETRO -0.2
 
 #define RADIUS_LOCAL 1
-#define SEARCH_SPACE_GRANULARITY 360
-#define DYNAMIC_DELTA_T 0.1
+#define SEARCH_SPACE_GRANULARITY 90
+#define DYNAMIC_DELTA_T 0.5
 
 
 
@@ -35,16 +39,18 @@ class ObstacleAvoidance : public QObject
 {
     Q_OBJECT
 public:
+    struct LocalMapEl{
+        double angle;
+        double x;
+        double y;
+        double distance;
+    };
 
     int reactiveFrontBehaviorStatus, reactiveBackBehaviorStatus;
 
     explicit ObstacleAvoidance(InverseKinematic* i, QObject *parent = 0);
     void setSlamModule(SLAM::SLAMModule *slam);
-
-    void handleNeuralSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
-    void handleEmpiricSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
-    void handleDynamicWindowSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction,  Data::Pose *actualFrontier);
-
+    void handleObstacle(const Data::SonarData &sonar, Data::RobotState *actualState, const Data::Action *actualAction, Data::Pose *actualFrontier);
 public slots:
     void setMovementType(int type);
 
@@ -60,8 +66,8 @@ signals:
 private slots:
     bool isReachablePose(Data::Pose predictedPose, Data::Pose actualPose);
     QVector<QPair<double, double> > calculateSearchSpace(const Data::SonarData &sonar);
-    QVector<QPair<QPair<double, double>, int> > getLocalMap(const Data::Pose actualPose);
-    QVector<QPair<double, double> > getLocalReachableSearchSpace(QVector<QPair<QPair<double, double>, int> > localMap);
+    QVector<ObstacleAvoidance::LocalMapEl> getLocalMap(const Data::Pose actualPose);
+    QVector<QPair<double, double> > getLocalReachableSearchSpace(QVector<LocalMapEl> localMap);
     int calculateBestVelocity(QVector<QPair<double, double> > searchSpace);
     void handleFrontSonarData(const Data::SonarData &sonar);
     int getActualMovement(double leftSpeed, double rightSpeed);
@@ -71,11 +77,17 @@ private slots:
     void handleBackSonarData(const Data::SonarData &sonar);
     Data::Pose forwardKinematics(const Data::Pose &from, double vr, double vl, double time);
 
+    void handleNeuralSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
+    void handleEmpiricSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
+    void handleDynamicWindowSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction,  Data::Pose *actualFrontier);
+
+
 private:
     enum reactiveBehaviorEnum {DEACTIVATED,FIRSTTIME,EXEC};
     enum typeMovementEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
     enum movementStateEnum {FRONT,RIGHT,LEFT,BACK,STOP};
     enum controlTypeEnum {HYBRID,NORMAL};
+
     movementStateEnum actualMovement;
     typeMovementEnum typeMovement;
 

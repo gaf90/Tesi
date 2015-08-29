@@ -36,9 +36,6 @@
 #define SPEED_LIMIT_ANGLE 10
 
 #define UPDATE_STATUS true
-#define OBSTACLE_EMPIRIC true
-#define OBSTACLE_DYNAMIC true
-#define OBSTACLE_NEURAL false
 
 /**
  * This class represents the logic for the robot.

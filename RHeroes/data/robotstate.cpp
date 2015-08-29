@@ -42,9 +42,9 @@ RobotState::~RobotState()
 
 const Pose &RobotState::getPose() const
 {
-    mutex->lock();
+    //mutex->lock();
     const Pose *p = &pose;
-    mutex->unlock();
+    //mutex->unlock();
     return *p;
 }
 

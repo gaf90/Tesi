@@ -182,6 +182,9 @@ int main(int argc, char *argv[])
     int robotController = logger.addFileOutput(QString(PREFIX "poaretController_%1.log").arg(conf.id), false);
     logger.setFilenameFilter(QRegExp(".*robotcontroller.*"), robotController);
 
+    int obstacle = logger.addFileOutput(QString(PREFIX "poaretObstacleController_%1.log").arg(conf.id), false);
+    logger.setFilenameFilter(QRegExp(".*obstacleavoidancehandler.*"), obstacle);
+
     int rutting = logger.addFileOutput(QString("poaretRouting_%1.log").arg(conf.id), false);
     logger.setFilenameFilter(QRegExp(".*connection.*"), rutting);
 

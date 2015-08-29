@@ -177,12 +177,9 @@ void RobotController::onSensorData(const Message &data)
         const Data::Action *actualAction = NULL;
         if (!normalActionQueue->isEmpty())
             actualAction = normalActionQueue->head();
-        if (OBSTACLE_EMPIRIC)
-            obstacleAvoidance->handleEmpiricSonarData(sonar,actualState,actualAction,actualFrontier);
-        else if (OBSTACLE_DYNAMIC)
-            obstacleAvoidance->handleDynamicWindowSonarData(sonar,actualState,actualAction,actualFrontier);
-        else if (OBSTACLE_NEURAL)
-            obstacleAvoidance->handleNeuralSonarData(sonar,actualState,actualAction,actualFrontier);
+
+        obstacleAvoidance->handleObstacle(sonar,actualState,actualAction,actualFrontier);
+
     }
     else if(typeid(data) == typeid(const WirelessMessage &))
     {
