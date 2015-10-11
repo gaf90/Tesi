@@ -5,20 +5,67 @@
 #include <slam/slammodule.h>
 #include <shared/constants.h>
 #include <shared/utilities.h>
+#include <libraries/fann/doublefann.h>
+
+#define TRAINING_FILE "FANN_training.data"
+#define TRAINING_NET "FANN_par.net"
+
 
 
 using namespace Data;
 using namespace SLAM::Geometry;
 
-
+QString typeMovementEnumString[16] = {"LLLFRRR","LLLFR","LLLF","LLL","LL","LFRRR","LFR","LF","L","FRRR","FR","F","RRR","RR","R","S"};
 
 ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, QObject *parent) : QObject(parent)
-{
-
+{  
     reactiveFrontBehaviorStatus = DEACTIVATED;
     reactiveBackBehaviorStatus = DEACTIVATED;
+    neuralBehaviorStatus = DEACTIVATED;
+    predictedMovement = S;
+    oldPredictedMovement = S;
     this->inverseKinematicModule = inverseKinematic;
+    if (OBSTACLE_NEURAL)
+    {
+        handleNeuralNetwork();
+    }
+}
 
+void ObstacleAvoidance::handleNeuralNetwork()
+{
+    QFile training_net(TRAINING_NET);
+    if (!training_net.exists())
+    {
+        ldbg << "FANN: No previous neural network saved."<<endl;
+        QFile training_data(TRAINING_FILE);
+        if (!training_data.exists())
+            ldbg << "FANN: No training data file" << endl;
+        else
+        {
+            num_input = 10;
+            num_output = 1;
+            num_layers = 3;
+            num_neurons_hidden = 5;
+            desired_error = (const float) 0.1;
+            max_epochs = 1000;
+            epochs_between_reports = 200;
+
+            neuralNetwork = fann_create_standard(num_layers, num_input,
+                                                 num_neurons_hidden, num_output);
+
+            fann_set_activation_function_hidden(neuralNetwork, FANN_LINEAR);
+            fann_set_activation_function_output(neuralNetwork, FANN_LINEAR);
+
+            fann_train_on_file(neuralNetwork, TRAINING_FILE, max_epochs,
+                               epochs_between_reports, desired_error);
+
+            fann_save(neuralNetwork, TRAINING_NET);
+        }
+    }
+    else
+    {
+        neuralNetwork = fann_create_from_file(TRAINING_NET);
+    }
 }
 
 void ObstacleAvoidance::setSlamModule(SLAM::SLAMModule *slam)
@@ -71,10 +118,10 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
 
         Pose predictedPose = forwardKinematics(actualPose,leftSpeed, rightSpeed,DYNAMIC_DELTA_T);
 
-        ldbg <<"Obstacle Avoidance - dynamic: predicted pose is (" << predictedPose.getX() << ", " <<predictedPose.getY() << ")" << endl;
+        //ldbg <<"Obstacle Avoidance - dynamic: predicted pose is (" << predictedPose.getX() << ", " <<predictedPose.getY() << ")" << endl;
 
         if (!isReachablePose(predictedPose, actualPose) ||
-                (sonar.getPosition() == SonarData::Front && actualMovement == FRONT && sonar.getMinDistance()<THRESHOLD))
+                (sonar.getPosition() == SonarData::Front && actualMovement != BACK && sonar.getMinDistance()<THRESHOLD))
         {
             emit sigUpdateSonarData(sonar);
             emit sigStopRobot(true);
@@ -87,17 +134,17 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
             int bestValue = calculateBestVelocity(searchSpace);
             if (bestValue == -1)
             {
-                ldbg <<"Obstacle Avoidance - dynamic: DWA failed." <<endl;
+                //ldbg <<"Obstacle Avoidance - dynamic: DWA failed." <<endl;
                 emit sigMoveRobot(0,-VAI_AVANTI,0);
             }
             else
             {
                 Pose bestPose = forwardKinematics(actualPose,searchSpace[bestValue].first,searchSpace[bestValue].second,DYNAMIC_DELTA_T);
-                ldbg <<"Obstacle Avoidance - dynamic: Best pose is (" << bestPose.getX() << ", " << bestPose.getY() << endl;
+                //ldbg <<"Obstacle Avoidance - dynamic: Best pose is (" << bestPose.getX() << ", " << bestPose.getY() << endl;
                 double trasl = bestPose.getDistance(actualPose);
-                ldbg <<"Obstacle Avoidance - dynamic: I must traslate of " << trasl << endl;
+                //ldbg <<"Obstacle Avoidance - dynamic: I must traslate of " << trasl << endl;
                 double rot = computeRotationFromPoses(actualPose,bestPose);
-                ldbg <<"Obstacle Avoidance - dynamic: I must rotate of " << rot << endl;
+                //ldbg <<"Obstacle Avoidance - dynamic: I must rotate of " << rot << endl;
                 emit sigMoveRobot(rot, trasl,0);
             }
             emit sigChangeRobotControlType(NORMAL);
@@ -105,7 +152,7 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
         }
         else
         {
-            //ldbg<<"Robot controller - dynamic: No obstacle. ok!"<<endl;
+            ////ldbg<<"Robot controller - dynamic: No obstacle. ok!"<<endl;
         }
     }
 }
@@ -141,7 +188,7 @@ QVector<ObstacleAvoidance::LocalMapEl> ObstacleAvoidance::getLocalMap(const Pose
         //Started from pose I go far until I find a pose unreachable
         for (double step=0; step<1 && !foundObstacle; step+=0.1)
         {
-            //ldbg << "Angle = "<<angle << " Cos = " << cos(angle) << " Sen = " << sin(angle)
+            ////ldbg << "Angle = "<<angle << " Cos = " << cos(angle) << " Sen = " << sin(angle)
             //    << "Actual X = " << actualX << "Actual Y = " << actualY;
 
             double deltaX = actualX + step*radius*cos(angle);
@@ -164,10 +211,10 @@ QVector<ObstacleAvoidance::LocalMapEl> ObstacleAvoidance::getLocalMap(const Pose
         i++;
     }
 
-//    //Print local map
-//    for (double i=0; i<SEARCH_SPACE_GRANULARITY; i++)
-//        ldbg << "Obstacle Avoidance - dynamic: Angle = "<< localMap[i].angle << ", X = " << localMap[i].x
-//             << " , Y = " << localMap[i].y << ", Distance = " << localMap[i].distance << endl;
+    //    //Print local map
+    //    for (double i=0; i<SEARCH_SPACE_GRANULARITY; i++)
+    //        //ldbg << "Obstacle Avoidance - dynamic: Angle = "<< localMap[i].angle << ", X = " << localMap[i].x
+    //             << " , Y = " << localMap[i].y << ", Distance = " << localMap[i].distance << endl;
 
 
     return localMap;
@@ -186,14 +233,16 @@ QVector<QPair<double, double> > ObstacleAvoidance::getLocalReachableSearchSpace(
         }
         else
         {
-            double dX = (localMap[i].x - actualState->getPose().getX())*cos(actualState->getPose().getTheta());
-            double curvature = 2*dX/localMap[i].distance;
+            double dXv = (localMap[i].x - actualState->getPose().getX())*cos(actualState->getPose().getTheta()) -
+                    (localMap[i].y - actualState->getPose().getY())*sin(actualState->getPose().getTheta());
+
+            double curvature = 2*dXv/localMap[i].distance;
 
             double leftSpeed = (MED_SPEED/RH_RADIUS)*(1 - (WHEEL_BASE/2)*curvature);
             double rightSpeed = (MED_SPEED/RH_RADIUS)*(1 + (WHEEL_BASE/2)*curvature);
 
-            //ldbg << "Obstacle Avoidance - dynamic: Pose (" << localMap[i].x << " , " << localMap[i].y << "), Velocity ("
-                 //<< leftSpeed << " , " << rightSpeed << ") "<< endl;
+            ////ldbg << "Obstacle Avoidance - dynamic: Pose (" << localMap[i].x << " , " << localMap[i].y << "), Velocity ("
+            //<< leftSpeed << " , " << rightSpeed << ") "<< endl;
 
             searchSpace[i].first = leftSpeed;
             searchSpace[i].second = rightSpeed;
@@ -214,23 +263,23 @@ int ObstacleAvoidance::calculateBestVelocity(QVector<QPair< double,double> > sea
     for(int counter = 0; counter < SEARCH_SPACE_GRANULARITY;counter++)
     {
         if (searchSpace[counter].first == 0 && searchSpace[counter].second == 0)
-               continue;
+            continue;
 
-        //ldbg << "Obstacle Avoidance - dynamic: Actual Frontier is (" << actualFrontier->getX() << ", " << actualFrontier->getY() <<", " << actualFrontier->getTheta() << ") " << endl;
+        ////ldbg << "Obstacle Avoidance - dynamic: Actual Frontier is (" << actualFrontier->getX() << ", " << actualFrontier->getY() <<", " << actualFrontier->getTheta() << ") " << endl;
         Pose predictedPose = forwardKinematics(actualState->getPose(),searchSpace[counter].first, searchSpace[counter].second,DYNAMIC_DELTA_T);
 
         distance = predictedPose.getDistance(*actualFrontier);
         targetHeading = angularDistance(actualFrontier->getTheta(),predictedPose.getTheta());
         clearance = searchSpace[counter].first;
 
-        //ldbg << "Obstacle Avoidance - dynamic: Predicted pose (" << predictedPose.getX() << " , " << predictedPose.getY() << ", " << predictedPose.getTheta() << "), Velocity ("
-            // << searchSpace[counter].first << " , " << searchSpace[counter].second << ") "<< endl;
-        //ldbg << "Parameters: Target Heading= "<< targetHeading << " Distance= " << distance << " Clearance= " << clearance<<endl;
+        ////ldbg << "Obstacle Avoidance - dynamic: Predicted pose (" << predictedPose.getX() << " , " << predictedPose.getY() << ", " << predictedPose.getTheta() << "), Velocity ("
+        // << searchSpace[counter].first << " , " << searchSpace[counter].second << ") "<< endl;
+        ////ldbg << "Parameters: Target Heading= "<< targetHeading << " Distance= " << distance << " Clearance= " << clearance<<endl;
         double cost = distance + clearance - targetHeading;
-        //ldbg << "Cost = " << cost << endl;
+        ////ldbg << "Cost = " << cost << endl;
         if (cost>=bestCost)
         {
-            //ldbg << "Is best cost!"<<endl;
+            ////ldbg << "Is best cost!"<<endl;
             bestCost = cost;
             bestValue = counter;
         }
@@ -241,11 +290,176 @@ int ObstacleAvoidance::calculateBestVelocity(QVector<QPair< double,double> > sea
     return bestValue;
 }
 
+bool ObstacleAvoidance::checkSonarData(const Data::SonarData &sonar)
+{
+    bool sonarDetectObstacle = sonar.getFront(0) < THRESHOLD || sonar.getFront(1) < THRESHOLD || sonar.getFront(2) < THRESHOLD ||sonar.getFront(3) < THRESHOLD ||sonar.getFront(4) < THRESHOLD ||
+            sonar.getBack(0) < THRESHOLD || sonar.getBack(1) < THRESHOLD || sonar.getBack(2) < THRESHOLD || sonar.getBack(3) < THRESHOLD || sonar.getBack(4) < THRESHOLD;
+
+    return sonarDetectObstacle;
+}
 
 void ObstacleAvoidance::handleNeuralSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose*actualFrontier)
 {
+    this->actualState = actualState;
+    this->actualAction = actualAction;
 
+    double leftSpeed = actualState->getLeftSpeed();
+    double rightSpeed = actualState->getRightSpeed();
+
+    if (leftSpeed != 0 && rightSpeed != 0)
+    {
+        emit sigChangeActionStartTimestamp(-1);
+        if (checkSonarData(sonar))
+        {
+            ldbg << "FANN: Minimum frontal distance is " << sonar.getMinDistance() << endl;
+            if (neuralBehaviorStatus == DEACTIVATED)
+            {
+                ldbg << "FANN: Stop robot. " << endl;
+                emit sigStopRobot(true);
+                neuralBehaviorStatus = FIRSTTIME;
+            }
+
+            if (neuralBehaviorStatus > DEACTIVATED)
+            {
+                emit sigUpdateSonarData(sonar);
+                fann_type input[10] = {sonar.getFront(0), sonar.getFront(1), sonar.getFront(2), sonar.getFront(3), sonar.getFront(4),
+                                       sonar.getBack(0),sonar.getBack(1),sonar.getBack(2),sonar.getBack(3),sonar.getBack(4)};
+
+                ldbg <<"FANN: Input file is " << input << endl;
+                oldPredictedMovement = predictedMovement;
+                predictedMovement = (int)(fann_run(neuralNetwork,input))[0];
+
+                ldbg << "FANN: Predicted action is " << typeMovementEnumString[predictedMovement]
+                        <<". Previous movement is " << typeMovementEnumString[oldPredictedMovement] << endl;
+                if (predictedMovement != oldPredictedMovement)
+                {
+                    neuralBehaviorStatus = EXEC;
+                    ldbg << "FANN: Need to change movement. Apply predicted action." << endl;
+                    applyPredictedAction(predictedMovement);
+                }
+                if (actualAction == NULL)
+                    neuralBehaviorStatus = DEACTIVATED;
+            }
+
+            emit sigChangeRobotControlType(NORMAL);
+        }
+        else
+        {
+            if (actualAction == NULL && neuralBehaviorStatus == EXEC)
+            {
+                ldbg << "FANN: Restart exploration."<< endl;
+                neuralBehaviorStatus = DEACTIVATED;
+                emit sigStopRobot(true);
+                emit sigRestartExploration();
+            }
+        }
+    }
 }
+
+void ObstacleAvoidance::applyPredictedAction(int predictedMovement)
+{    
+    switch (predictedMovement)
+    {
+    case LLLFRRR:
+    {
+        ldbg <<"FANN: Go back and rotate to right (max)." << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
+        break;
+    }
+    case LLLFR:
+    {
+        ldbg <<"FANN: Go back and rotate to right (max)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
+        break;
+    }
+    case LLLF:
+    {
+        ldbg <<"FANN: Go back and rotate to right (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MED);
+        break;
+    }
+    case LLL:
+    {
+        ldbg <<"FANN: Go back and rotate to right (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MED);
+        break;
+    }
+    case LL:
+    {
+        ldbg <<"FANN: Go back and rotate to right (min)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MIN);
+        break;
+    }
+    case LFRRR:
+    {
+        ldbg <<"FANN: Go back and rotate to left (max)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MAX);
+        break;
+    }
+    case LFR:
+    {
+        ldbg <<"FANN: Go back and rotate to left (max)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MAX);
+        break;
+    }
+    case LF:
+    {
+        ldbg <<"FANN: Go back and rotate to left (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        break;
+    }
+    case L:
+    {
+        ldbg <<"FANN: Go back and rotate to right (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MED);
+        break;
+    }
+    case FRRR:
+    {
+        ldbg <<"FANN: Go back and rotate to left (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        break;
+    }
+    case FR:
+    {
+        ldbg <<"FANN: Go back and rotate to left (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        break;
+    }
+    case F:
+    {
+        ldbg <<"FANN: Go back and rotate to left (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        break;
+    }
+    case RRR:
+    {
+        ldbg <<"FANN: Go back and rotate to left (max)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MAX);
+        break;
+    }
+    case RR:
+    {
+        ldbg <<"FANN: Go back and rotate to left (min)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MIN);
+        break;
+    }
+    case R:
+    {
+        ldbg <<"FANN: Go back and rotate to left (med)" << endl;
+        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        break;
+    }
+    default:
+    {
+        ldbg <<"FANN: Prediction error."<<endl;
+        break;
+    }
+    }
+    emit sigMoveRobot(0,VAI_AVANTI,0);
+}
+
+
 
 void ObstacleAvoidance::handleEmpiricSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose*actualFrontier)
 {
@@ -254,7 +468,7 @@ void ObstacleAvoidance::handleEmpiricSonarData(const Data::SonarData &sonar,Data
 
     actualMovement = (movementStateEnum)getActualMovement(actualState->getLeftSpeed(),actualState->getRightSpeed());
 
-    //ldbg<<"Robot Controller - empiric: Actual movement = "<< actualMovement<<endl;
+    ////ldbg<<"Robot Controller - empiric: Actual movement = "<< actualMovement<<endl;
 
     if(sonar.getPosition() == SonarData::Front && !(actualMovement == BACK))
         handleFrontSonarData(sonar);
@@ -274,7 +488,7 @@ void ObstacleAvoidance::handleFrontSonarData(const Data::SonarData &sonar)
         if (actualAction == NULL && reactiveFrontBehaviorStatus > DEACTIVATED)
         {
             reactiveFrontBehaviorStatus = DEACTIVATED;
-            //ldbg <<"Robot controller - empiric: Nothing to do. Restart exploration!" << endl;
+            ////ldbg <<"Robot controller - empiric: Nothing to do. Restart exploration!" << endl;
             emit sigRestartExploration();
         }
     }
@@ -298,26 +512,26 @@ int ObstacleAvoidance::getActualMovement(double leftSpeed, double rightSpeed)
         int type = actualAction->getType();
         double value = actualAction->getValue();
 
-        //ldbg <<"Robot Controller: Next action to do is a " << type << " with a value " << value<<endl;
+        ////ldbg <<"Robot Controller: Next action to do is a " << type << " with a value " << value<<endl;
 
         if (type == Action::Rotation && value>0)
         {
-            //ldbg <<"Robot Controller: I'm rotating to right!"<<endl;
+            ////ldbg <<"Robot Controller: I'm rotating to right!"<<endl;
             return RIGHT;
         }
         else if (type == Action::Rotation && value<0)
         {
-            //ldbg <<"Robot Controller: I'm rotating to left!"<<endl;
+            ////ldbg <<"Robot Controller: I'm rotating to left!"<<endl;
             return LEFT;
         }
         else if (type == Action::Translation && value<0)
         {
-            //ldbg <<"Robot Controller: I'm moving backward!"<<endl;
+            ////ldbg <<"Robot Controller: I'm moving backward!"<<endl;
             return BACK;
         }
         else
         {
-            //ldbg <<"Robot Controller: I'm going straight" <<endl;
+            ////ldbg <<"Robot Controller: I'm going straight" <<endl;
             return FRONT;
         }
     }
@@ -335,7 +549,7 @@ void ObstacleAvoidance::handleFrontObstacle(const Data::SonarData &sonar)
     if (reactiveFrontBehaviorStatus == DEACTIVATED)
     {
         emit sigStopRobot(true);
-        //ldbg <<"RobotController - Empiric FSM: DEACTIVATED to FIRSTTIME."<<endl;
+        ////ldbg <<"RobotController - Empiric FSM: DEACTIVATED to FIRSTTIME."<<endl;
         reactiveFrontBehaviorStatus = FIRSTTIME;
     }
 
@@ -364,14 +578,14 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                         if (reactiveFrontBehaviorStatus == FIRSTTIME)
                         {
                             reactiveFrontBehaviorStatus = EXEC;
-                            //ldbg <<"Caso LL_L_F_R_RR: Ostacoli ovunque"<<endl;
+                            ////ldbg <<"Caso LL_L_F_R_RR: Ostacoli ovunque"<<endl;
                             emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
                             typeMovement = LLLFRRR;
-                            //ldbg<< typeMovement <<endl;
+                            ////ldbg<< typeMovement <<endl;
                         }
                         else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLLFRRR)
                         {
-                            //ldbg << "Typemovement was LLLFRRR. Now is" << typeMovement <<endl;
+                            ////ldbg << "Typemovement was LLLFRRR. Now is" << typeMovement <<endl;
                             reactiveFrontBehaviorStatus = DEACTIVATED;
                         }
                     }
@@ -380,15 +594,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                         if (reactiveFrontBehaviorStatus == FIRSTTIME)
                         {
                             reactiveFrontBehaviorStatus = EXEC;
-                            //ldbg <<"Caso LL_L_F_R: Estrema destra libera"<<endl;
+                            ////ldbg <<"Caso LL_L_F_R: Estrema destra libera"<<endl;
                             emit sigMoveRobot(0,VAI_INDIETRO,0);
                             emit sigMoveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
                             typeMovement = LLLFR;
-                            //ldbg<< typeMovement <<endl;
+                            ////ldbg<< typeMovement <<endl;
                         }
                         else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLLFR)
                         {
-                            //ldbg << "Typemovement was LLLFR. Now is" << typeMovement <<endl;
+                            ////ldbg << "Typemovement was LLLFR. Now is" << typeMovement <<endl;
                             reactiveFrontBehaviorStatus = DEACTIVATED;
                         }
                     }
@@ -398,15 +612,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                     if (reactiveFrontBehaviorStatus == FIRSTTIME)
                     {
                         reactiveFrontBehaviorStatus = EXEC;
-                        //ldbg <<"Caso LL_L_F: Destra libera"<<endl;
+                        ////ldbg <<"Caso LL_L_F: Destra libera"<<endl;
                         emit sigMoveRobot(0,VAI_INDIETRO,0);
                         emit sigMoveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
                         typeMovement = LLLF;
-                        //ldbg<< typeMovement <<endl;
+                        ////ldbg<< typeMovement <<endl;
                     }
                     else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLLF)
                     {
-                        //ldbg << "Typemovement was LLLF. Now is" << typeMovement <<endl;
+                        ////ldbg << "Typemovement was LLLF. Now is" << typeMovement <<endl;
                         reactiveFrontBehaviorStatus = DEACTIVATED;
                     }
                 }
@@ -416,15 +630,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                 if (reactiveFrontBehaviorStatus == FIRSTTIME)
                 {
                     reactiveFrontBehaviorStatus = EXEC;
-                    //ldbg <<"Caso LL_L: Sinistra occupata"<<endl;
+                    ////ldbg <<"Caso LL_L: Sinistra occupata"<<endl;
                     emit sigMoveRobot(0,VAI_INDIETRO,0);
                     emit sigMoveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
                     typeMovement = LLL;
-                    //ldbg<< typeMovement <<endl;
+                    ////ldbg<< typeMovement <<endl;
                 }
                 else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LLL)
                 {
-                    //ldbg << "Typemovement was LLL. Now is" << typeMovement <<endl;
+                    ////ldbg << "Typemovement was LLL. Now is" << typeMovement <<endl;
                     reactiveFrontBehaviorStatus = DEACTIVATED;
                 }
             }
@@ -434,15 +648,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
             if (reactiveFrontBehaviorStatus == FIRSTTIME)
             {
                 reactiveFrontBehaviorStatus = EXEC;
-                //ldbg <<"Caso LL: Sinistra occupata"<<endl;
+                ////ldbg <<"Caso LL: Sinistra occupata"<<endl;
                 emit sigMoveRobot(0,VAI_INDIETRO,0);
                 emit sigMoveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
                 typeMovement = LL;
-                //ldbg<< typeMovement <<endl;
+                ////ldbg<< typeMovement <<endl;
             }
             else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LL)
             {
-                //ldbg << "Typemovement was LL. Now is" << typeMovement <<endl;
+                ////ldbg << "Typemovement was LL. Now is" << typeMovement <<endl;
                 reactiveFrontBehaviorStatus = DEACTIVATED;
             }
         }
@@ -458,15 +672,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                     if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=LFRRR)
                     {
                         reactiveFrontBehaviorStatus = EXEC;
-                        //ldbg <<"Caso L_F_R_RR: Possibile pertugio estrema sinistra"<<endl;
+                        ////ldbg <<"Caso L_F_R_RR: Possibile pertugio estrema sinistra"<<endl;
                         emit sigMoveRobot(0,VAI_INDIETRO,0);
                         emit sigMoveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
                         typeMovement = LFRRR;
-                        //ldbg<< typeMovement <<endl;
+                        ////ldbg<< typeMovement <<endl;
                     }
                     else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LFRRR)
                     {
-                        //ldbg << "Typemovement was LFRR. Now is" << typeMovement <<endl;
+                        ////ldbg << "Typemovement was LFRR. Now is" << typeMovement <<endl;
                         reactiveFrontBehaviorStatus = DEACTIVATED;
                     }
                 }
@@ -475,14 +689,14 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                     if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=LFR)
                     {
                         reactiveFrontBehaviorStatus = EXEC;
-                        //ldbg <<"Caso L_F_R: Estremi liberi. Vado indietro"<<endl;
+                        ////ldbg <<"Caso L_F_R: Estremi liberi. Vado indietro"<<endl;
                         emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
                         typeMovement = LFR;
-                        //ldbg<< typeMovement <<endl;
+                        ////ldbg<< typeMovement <<endl;
                     }
                     else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LFR)
                     {
-                        //ldbg << "Typemovement was LFR. Now is" << typeMovement <<endl;
+                        ////ldbg << "Typemovement was LFR. Now is" << typeMovement <<endl;
                         reactiveFrontBehaviorStatus = DEACTIVATED;
                     }
                 }
@@ -492,15 +706,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                 if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=LF)
                 {
                     reactiveFrontBehaviorStatus = EXEC;
-                    //ldbg <<"Caso L_F: Destra libera"<<endl;
+                    ////ldbg <<"Caso L_F: Destra libera"<<endl;
                     emit sigMoveRobot(0,VAI_INDIETRO,0);
                     emit sigMoveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
                     typeMovement = LF;
-                    //ldbg<< typeMovement <<endl;
+                    ////ldbg<< typeMovement <<endl;
                 }
                 else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=LF)
                 {
-                    //ldbg << "Typemovement was LF. Now is" << typeMovement <<endl;
+                    ////ldbg << "Typemovement was LF. Now is" << typeMovement <<endl;
                     reactiveFrontBehaviorStatus = DEACTIVATED;
                 }
             }
@@ -510,15 +724,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
             if (reactiveFrontBehaviorStatus == FIRSTTIME)
             {
                 reactiveFrontBehaviorStatus = EXEC;
-                //ldbg <<"Caso L: Sinistra occupata"<<endl;
+                ////ldbg <<"Caso L: Sinistra occupata"<<endl;
                 emit sigMoveRobot(0,VAI_INDIETRO,0);
                 emit sigMoveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
                 typeMovement = L;
-                //ldbg<< typeMovement <<endl;
+                ////ldbg<< typeMovement <<endl;
             }
             else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=L)
             {
-                //ldbg << "Typemovement was L. Now is" << typeMovement <<endl;
+                ////ldbg << "Typemovement was L. Now is" << typeMovement <<endl;
                 reactiveFrontBehaviorStatus = DEACTIVATED;
             }
 
@@ -533,15 +747,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                 if (reactiveFrontBehaviorStatus == FIRSTTIME)//&& typeMovement!=FRRR)
                 {
                     reactiveFrontBehaviorStatus = EXEC;
-                    //ldbg <<"Caso F_R_RR: Sinistra libera"<<endl;
+                    ////ldbg <<"Caso F_R_RR: Sinistra libera"<<endl;
                     emit sigMoveRobot(0,VAI_INDIETRO,0);
                     emit sigMoveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
                     typeMovement = FRRR;
-                    //ldbg<< typeMovement <<endl;
+                    ////ldbg<< typeMovement <<endl;
                 }
                 else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=FRRR)
                 {
-                    //ldbg << "Typemovement was FRR. Now is" << typeMovement <<endl;
+                    ////ldbg << "Typemovement was FRR. Now is" << typeMovement <<endl;
                     reactiveFrontBehaviorStatus = DEACTIVATED;
                 }
             }
@@ -550,15 +764,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
                 if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=FR)
                 {
                     reactiveFrontBehaviorStatus = EXEC;
-                    //ldbg <<"Caso F_R: Sinistra libera"<<endl;
+                    ////ldbg <<"Caso F_R: Sinistra libera"<<endl;
                     emit sigMoveRobot(0,VAI_INDIETRO,0);
                     emit sigMoveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
                     typeMovement = FR;
-                    //ldbg<< typeMovement <<endl;
+                    ////ldbg<< typeMovement <<endl;
                 }
                 else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=FR)
                 {
-                    //ldbg << "Typemovement was FR. Now is" << typeMovement <<endl;
+                    ////ldbg << "Typemovement was FR. Now is" << typeMovement <<endl;
                     reactiveFrontBehaviorStatus = DEACTIVATED;
                 }
             }
@@ -569,14 +783,14 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
             if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=F)
             {
                 reactiveFrontBehaviorStatus = EXEC;
-                //ldbg <<"Caso F: Caso indecisione. Vado indietro."<<endl;
+                ////ldbg <<"Caso F: Caso indecisione. Vado indietro."<<endl;
                 emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MIN);
                 typeMovement = F;
-                //ldbg<< typeMovement <<endl;
+                ////ldbg<< typeMovement <<endl;
             }
             else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=F)
             {
-                //ldbg << "Typemovement was F. Now is" << typeMovement <<endl;
+                ////ldbg << "Typemovement was F. Now is" << typeMovement <<endl;
                 reactiveFrontBehaviorStatus = DEACTIVATED;
             }
         }
@@ -588,15 +802,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
             if (reactiveFrontBehaviorStatus == FIRSTTIME)//&& typeMovement!=RRR)
             {
                 reactiveFrontBehaviorStatus = EXEC;
-                //ldbg <<"Caso R_RR: Sinistra libera"<<endl;
+                ////ldbg <<"Caso R_RR: Sinistra libera"<<endl;
                 emit sigMoveRobot(0,VAI_INDIETRO,0);
                 emit sigMoveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
                 typeMovement = RRR;
-                //ldbg<< typeMovement <<endl;
+                ////ldbg<< typeMovement <<endl;
             }
             else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=RRR)
             {
-                //ldbg << "Typemovement was RRR. Now is" << typeMovement <<endl;
+                ////ldbg << "Typemovement was RRR. Now is" << typeMovement <<endl;
                 reactiveFrontBehaviorStatus = DEACTIVATED;
             }
         }
@@ -605,15 +819,15 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
             if (reactiveFrontBehaviorStatus == FIRSTTIME)// && typeMovement!=R)
             {
                 reactiveFrontBehaviorStatus = EXEC;
-                //ldbg <<"Caso R: Sinistra libera"<<endl;
+                ////ldbg <<"Caso R: Sinistra libera"<<endl;
                 emit sigMoveRobot(0,VAI_INDIETRO,0);
                 emit sigMoveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
                 typeMovement = R;
-                //ldbg<< typeMovement <<endl;
+                ////ldbg<< typeMovement <<endl;
             }
             else if(reactiveFrontBehaviorStatus == EXEC  && typeMovement!=R)
             {
-                //ldbg << "Typemovement was R. Now is" << typeMovement <<endl;
+                ////ldbg << "Typemovement was R. Now is" << typeMovement <<endl;
                 reactiveFrontBehaviorStatus = DEACTIVATED;;
             }
         }
@@ -623,20 +837,20 @@ void ObstacleAvoidance::obstacleAvoidanceEmpiricHandler(double distanceRightR, d
         if (reactiveFrontBehaviorStatus == FIRSTTIME)//&& typeMovement!=RR)
         {
             reactiveFrontBehaviorStatus = EXEC;
-            //ldbg <<"Caso_RR: Sinistra libera"<<endl;
+            ////ldbg <<"Caso_RR: Sinistra libera"<<endl;
             emit sigMoveRobot(0,VAI_INDIETRO,0);
             emit sigMoveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
             typeMovement = RR;
-            //ldbg<< typeMovement <<endl;
+            ////ldbg<< typeMovement <<endl;
         }
         else if(reactiveFrontBehaviorStatus == EXEC && typeMovement!=RR)
         {
-            //ldbg << "Typemovement was RR. Now is" << typeMovement <<endl;
+            ////ldbg << "Typemovement was RR. Now is" << typeMovement <<endl;
             reactiveFrontBehaviorStatus = DEACTIVATED;
         }
     }
     //else
-    //ldbg<<"Waiting movement typeMovement" << typeMovement << endl;
+    ////ldbg<<"Waiting movement typeMovement" << typeMovement << endl;
 }
 
 void ObstacleAvoidance::handleBackObstacle(const Data::SonarData &sonar)
@@ -645,7 +859,7 @@ void ObstacleAvoidance::handleBackObstacle(const Data::SonarData &sonar)
     if (reactiveBackBehaviorStatus == DEACTIVATED)
     {
         emit sigStopRobot(true);
-        //ldbg <<"RobotController - empiric: DEACTIVATED to FIRSTTIME (back)"<<endl;
+        ////ldbg <<"RobotController - empiric: DEACTIVATED to FIRSTTIME (back)"<<endl;
         reactiveBackBehaviorStatus = FIRSTTIME;
     }
 

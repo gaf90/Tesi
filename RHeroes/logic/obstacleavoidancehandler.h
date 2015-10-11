@@ -13,11 +13,12 @@
 #include <pathPlanner/hybridAStar/hybridastaralgorithm.h>
 
 #include <slam/slammodule.h>
+#include <libraries/fann/doublefann.h>
 
 
 #define OBSTACLE_EMPIRIC false
-#define OBSTACLE_DYNAMIC true
-#define OBSTACLE_NEURAL false
+#define OBSTACLE_DYNAMIC false
+#define OBSTACLE_NEURAL true
 
 #define THRESHOLD 0.23
 #define RUOTASINISTRA_MIN 10
@@ -35,8 +36,6 @@
 #define RH_RADIUS 0.63
 
 
-
-
 class ObstacleAvoidance : public QObject
 {
     Q_OBJECT
@@ -48,15 +47,18 @@ public:
         double distance;
     };
 
-    int reactiveFrontBehaviorStatus, reactiveBackBehaviorStatus;
+
+    int reactiveFrontBehaviorStatus, reactiveBackBehaviorStatus, neuralBehaviorStatus;
 
     explicit ObstacleAvoidance(InverseKinematic* i, QObject *parent = 0);
     void setSlamModule(SLAM::SLAMModule *slam);
     void handleObstacle(const Data::SonarData &sonar, Data::RobotState *actualState, const Data::Action *actualAction, Data::Pose *actualFrontier);
-public slots:
+    void handleNeuralNetwork();
+    void applyPredictedAction(int predictedMovement);
     void setMovementType(int type);
 
 
+    bool checkSonarData(const Data::SonarData &sonar);
 signals:
     void sigChangeActionStartTimestamp(int);
     void sigChangeRobotControlType(int);
@@ -86,9 +88,13 @@ private slots:
 
 private:
     enum reactiveBehaviorEnum {DEACTIVATED,FIRSTTIME,EXEC};
-    enum typeMovementEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
     enum movementStateEnum {FRONT,RIGHT,LEFT,BACK,STOP};
     enum controlTypeEnum {HYBRID,NORMAL};
+    enum typeMovementEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
+    struct fann* neuralNetwork;
+    int oldPredictedMovement;
+    int predictedMovement;
+
 
     movementStateEnum actualMovement;
     typeMovementEnum typeMovement;
@@ -100,6 +106,14 @@ private:
     InverseKinematic *inverseKinematicModule;
 
     SLAM::SLAMModule *slam;
+
+    int num_input;
+    int num_output;
+    int num_layers;
+    int num_neurons_hidden;
+    float desired_error;
+    int max_epochs;
+    int epochs_between_reports;
 
 
 };

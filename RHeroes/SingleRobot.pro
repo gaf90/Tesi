@@ -21,8 +21,7 @@ QMAKE_CXXFLAGS_DEBUG += -D__DEBUG__ -Wall -Wextra -W
 QMAKE_CXXFLAGS_RELEASE += -O3 -msse -mmmx
 !mac:unix:QMAKE_LFLAGS_DEBUG += -rdynamic
 
-INCLUDEPATH += libraries/eigen3 libraries/RandomLib/include libraries/opencv231
-
+INCLUDEPATH += libraries/eigen3 libraries/RandomLib/include libraries/opencv231 libraries/fann/include
 LIBSROOT = $$_PRO_FILE_PWD_/libraries/bin
 mac:LIBSROOT = $$LIBSROOT/mac
 !mac:unix:LIBSROOT = $$LIBSROOT/linux
@@ -62,20 +61,11 @@ SOURCES += \
     victimDetection/victimdetectionmodule.cpp \    
     victimDetection/victimdetectionsimulator.cpp \
     connection/rountingcontroller.cpp \
-#    logic/fann.c \
-#    logic/inversekinematicnn.cpp \
-#    logic/doublefann.c \
     logic/wheelspeeds.cpp \
-#    logic/fann.c \
-#    logic/fann_train_data.c \
-#    logic/fann_train.c \
-#    logic/fann_io.c \
-#    logic/fann_error.c \
-#    logic/fann_cascade.c \
     logic/inversekinematiccf.cpp \
     logic/inversekinematic.cpp \
     logic/airrobot.cpp \
-    logic/obstacleavoidancehandler.cpp
+    logic/obstacleavoidancehandler.cpp \
 
 HEADERS  += \
     logic/robot.h \
@@ -87,24 +77,11 @@ HEADERS  += \
     victimDetection/victimdetectionmodule.h \        
     victimDetection/victimdetectionsimulator.h \
     connection/rountingcontroller.h \
-#    logic/fann.h \
-#    logic/doublefann.h \
-#    logic/inversekinematicnn.h \
     logic/wheelspeeds.h \
-#    logic/fann.h \
-#    logic/fann_train.h \
-#    logic/fann_io.h \
-#    logic/fann_internal.h \
-#    logic/fann_error.h \
-#    logic/fann_data.h \
-#    logic/fann_cpp.h \
-#    logic/fann_cascade.h \
-#    logic/fann_activation.h \
-#    logic/config.h \
     logic/inversekinematiccf.h \
     logic/inversekinematic.h \
     logic/airrobot.h \
-    logic/obstacleavoidancehandler.h
+    logic/obstacleavoidancehandler.h \
 
 OTHER_FILES += \
     Doxyfile \
@@ -113,3 +90,12 @@ OTHER_FILES += \
 RESOURCES += \
 #    logic/neunet.qrc
 
+
+unix|win32: LIBS += -lfann
+
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/libraries/bin/win32/ -lfann
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/libraries/bin/win32/ -lfann
+else:unix: LIBS += -L$$PWD/libraries/bin/win32/ -lfann
+
+INCLUDEPATH += $$PWD/libraries/fann
+DEPENDPATH += $$PWD/libraries/fann/
