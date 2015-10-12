@@ -16,6 +16,7 @@ using namespace Data;
 using namespace SLAM::Geometry;
 
 QString typeMovementEnumString[16] = {"LLLFRRR","LLLFR","LLLF","LLL","LL","LFRRR","LFR","LF","L","FRRR","FR","F","RRR","RR","R","S"};
+QString statusEnumString[3] = {"DEACTIVATED","FIRSTTIME","EXEC"};
 
 ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, QObject *parent) : QObject(parent)
 {  
@@ -303,57 +304,52 @@ void ObstacleAvoidance::handleNeuralSonarData(const Data::SonarData &sonar,Data:
     this->actualState = actualState;
     this->actualAction = actualAction;
 
-    double leftSpeed = actualState->getLeftSpeed();
-    double rightSpeed = actualState->getRightSpeed();
+    emit sigChangeActionStartTimestamp(-1);
 
-    if (leftSpeed != 0 && rightSpeed != 0)
+    if (checkSonarData(sonar))
     {
-        emit sigChangeActionStartTimestamp(-1);
-        if (checkSonarData(sonar))
+        ldbg << "FANN: Neural Behavior Status is "<< statusEnumString[neuralBehaviorStatus]<<endl;
+        ldbg << "FANN: Minimum frontal distance is " << sonar.getMinDistance() << endl;
+        if (neuralBehaviorStatus == DEACTIVATED)
         {
-            ldbg << "FANN: Minimum frontal distance is " << sonar.getMinDistance() << endl;
-            if (neuralBehaviorStatus == DEACTIVATED)
-            {
-                ldbg << "FANN: Stop robot. " << endl;
-                emit sigStopRobot(true);
-                neuralBehaviorStatus = FIRSTTIME;
-            }
-
-            if (neuralBehaviorStatus > DEACTIVATED)
-            {
-                emit sigUpdateSonarData(sonar);
-                fann_type input[10] = {sonar.getFront(0), sonar.getFront(1), sonar.getFront(2), sonar.getFront(3), sonar.getFront(4),
-                                       sonar.getBack(0),sonar.getBack(1),sonar.getBack(2),sonar.getBack(3),sonar.getBack(4)};
-
-                ldbg <<"FANN: Input file is " << input << endl;
-                oldPredictedMovement = predictedMovement;
-                predictedMovement = (int)(fann_run(neuralNetwork,input))[0];
-
-                ldbg << "FANN: Predicted action is " << typeMovementEnumString[predictedMovement]
-                        <<". Previous movement is " << typeMovementEnumString[oldPredictedMovement] << endl;
-                if (predictedMovement != oldPredictedMovement)
-                {
-                    neuralBehaviorStatus = EXEC;
-                    ldbg << "FANN: Need to change movement. Apply predicted action." << endl;
-                    applyPredictedAction(predictedMovement);
-                }
-                if (actualAction == NULL)
-                    neuralBehaviorStatus = DEACTIVATED;
-            }
-
-            emit sigChangeRobotControlType(NORMAL);
+            ldbg << "FANN: Stop robot. " << endl;
+            emit sigStopRobot(true);
+            neuralBehaviorStatus = FIRSTTIME;
         }
-        else
+        else if (neuralBehaviorStatus > DEACTIVATED)
         {
-            if (actualAction == NULL && neuralBehaviorStatus == EXEC)
+            emit sigUpdateSonarData(sonar);
+            fann_type input[10] = {sonar.getFront(0), sonar.getFront(1), sonar.getFront(2), sonar.getFront(3), sonar.getFront(4),
+                                   sonar.getBack(0),sonar.getBack(1),sonar.getBack(2),sonar.getBack(3),sonar.getBack(4)};
+
+            ldbg <<"FANN: Input file is " << input << endl;
+            oldPredictedMovement = predictedMovement;
+            predictedMovement = (int)(fann_run(neuralNetwork,input))[0];
+
+            ldbg << "FANN: Predicted action is " << typeMovementEnumString[predictedMovement]
+                    <<". Previous movement is " << typeMovementEnumString[oldPredictedMovement] << endl;
+            if (predictedMovement != oldPredictedMovement)
             {
-                ldbg << "FANN: Restart exploration."<< endl;
-                neuralBehaviorStatus = DEACTIVATED;
-                emit sigStopRobot(true);
-                emit sigRestartExploration();
+                neuralBehaviorStatus = EXEC;
+                ldbg << "FANN: Need to change movement. Apply predicted action." << endl;
+                applyPredictedAction(predictedMovement);
             }
+            else
+                ldbg <<"FANN: Already do that movement. Ignore sonar data" << endl;
         }
+
+        emit sigChangeRobotControlType(NORMAL);
     }
+    else if (actualAction == NULL && neuralBehaviorStatus > DEACTIVATED)
+    {
+        ldbg << "FANN: Restart exploration."<< endl;
+        neuralBehaviorStatus = DEACTIVATED;
+        predictedMovement = S;
+        oldPredictedMovement = S;
+        emit sigStopRobot(true);
+        emit sigRestartExploration();
+    }
+
 }
 
 void ObstacleAvoidance::applyPredictedAction(int predictedMovement)
@@ -512,28 +508,16 @@ int ObstacleAvoidance::getActualMovement(double leftSpeed, double rightSpeed)
         int type = actualAction->getType();
         double value = actualAction->getValue();
 
-        ////ldbg <<"Robot Controller: Next action to do is a " << type << " with a value " << value<<endl;
+        ldbg <<"Robot Controller: Next action to do is a " << type << " with a value " << value<<endl;
 
         if (type == Action::Rotation && value>0)
-        {
-            ////ldbg <<"Robot Controller: I'm rotating to right!"<<endl;
             return RIGHT;
-        }
         else if (type == Action::Rotation && value<0)
-        {
-            ////ldbg <<"Robot Controller: I'm rotating to left!"<<endl;
             return LEFT;
-        }
         else if (type == Action::Translation && value<0)
-        {
-            ////ldbg <<"Robot Controller: I'm moving backward!"<<endl;
             return BACK;
-        }
         else
-        {
-            ////ldbg <<"Robot Controller: I'm going straight" <<endl;
             return FRONT;
-        }
     }
 }
 
