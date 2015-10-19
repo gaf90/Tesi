@@ -15,20 +15,15 @@
 #include <slam/slammodule.h>
 #include <libraries/fann/doublefann.h>
 
-
-#define OBSTACLE_EMPIRIC false
-#define OBSTACLE_DYNAMIC false
-#define OBSTACLE_NEURAL true
-
-#define THRESHOLD 0.23
+#define THRESHOLD 0.22
 #define RUOTASINISTRA_MIN 10
-#define RUOTASINISTRA_MED 20
-#define RUOTASINISTRA_MAX 40
+#define RUOTASINISTRA_MED 15
+#define RUOTASINISTRA_MAX 20
 #define RUOTADESTRA_MIN -10
-#define RUOTADESTRA_MED -20
-#define RUOTADESTRA_MAX -40
+#define RUOTADESTRA_MED -15
+#define RUOTADESTRA_MAX -20
 #define VAI_AVANTI 0.5
-#define VAI_INDIETRO -0.2
+#define VAI_INDIETRO -0.15
 
 #define RADIUS_LOCAL 2
 #define SEARCH_SPACE_GRANULARITY 20
@@ -48,7 +43,7 @@ public:
     };
 
 
-    int reactiveFrontBehaviorStatus, reactiveBackBehaviorStatus, neuralBehaviorStatus;
+    int empiricFrontStatus, empiricBackStatus, neuralBehaviorStatus;
 
     explicit ObstacleAvoidance(InverseKinematic* i, QObject *parent = 0);
     void setSlamModule(SLAM::SLAMModule *slam);
@@ -58,7 +53,7 @@ public:
     void setMovementType(int type);
 
 
-    bool checkSonarData(const Data::SonarData &sonar);
+    void checkSonarData(const Data::SonarData &sonar);
 signals:
     void sigChangeActionStartTimestamp(int);
     void sigChangeRobotControlType(int);
@@ -73,12 +68,8 @@ private slots:
     QVector<ObstacleAvoidance::LocalMapEl> getLocalMap(const Data::Pose actualPose);
     QVector<QPair<double, double> > getLocalReachableSearchSpace(QVector<LocalMapEl> localMap);
     int calculateBestVelocity(QVector<QPair<double, double> > searchSpace);
-    void handleFrontSonarData(const Data::SonarData &sonar);
     int getActualMovement(double leftSpeed, double rightSpeed);
-    void handleFrontObstacle(const Data::SonarData &sonar);
-    void obstacleAvoidanceEmpiricHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL);
-    void handleBackObstacle(const Data::SonarData &sonar);
-    void handleBackSonarData(const Data::SonarData &sonar);
+    void empiricObstacleHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL);
     Data::Pose forwardKinematics(const Data::Pose &from, double vr, double vl, double time);
 
     void handleNeuralSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
@@ -87,17 +78,19 @@ private slots:
 
 
 private:
-    enum reactiveBehaviorEnum {DEACTIVATED,FIRSTTIME,EXEC};
+    enum obstacleAlgEnum {EMPIRIC,DWA,NEURAL};
+    enum algStateEnum {DEACTIVATED,FIRSTTIME,EXEC};
     enum movementStateEnum {FRONT,RIGHT,LEFT,BACK,STOP};
     enum controlTypeEnum {HYBRID,NORMAL};
-    enum typeMovementEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
+    enum sensorDataEnum {LLLFRRR,LLLFR,LLLF,LLL,LL,LFRRR,LFR,LF,L,FRRR,FR,F,RRR,RR,R,S};
     struct fann* neuralNetwork;
     int oldPredictedMovement;
     int predictedMovement;
 
 
     movementStateEnum actualMovement;
-    typeMovementEnum typeMovement;
+    sensorDataEnum sensorDataCaptured;
+    obstacleAlgEnum algorithmType;
 
     Data::RobotState *actualState;
     const Data::Action*actualAction;
@@ -114,6 +107,9 @@ private:
     float desired_error;
     int max_epochs;
     int epochs_between_reports;
+
+    bool isFrontObstacle;
+    bool isBackObstacle;
 
 
 };
