@@ -353,6 +353,8 @@ void Robot::handleModuleActivationMessage(const BuddyMessage *buddy)
         {
             robotController->obstacleAvoidance->empiricBackStatus =0;
             robotController->obstacleAvoidance->empiricFrontStatus =0;
+            robotController->obstacleAvoidance->neuralBehaviorStatus = 0;
+            robotController->obstacleAvoidance->dwaBehaviorStatus = 0;
             robotController->sonarStatus = 1;
             robotController->stopRobot(true);
         }

@@ -25,9 +25,9 @@
 #define VAI_AVANTI 0.5
 #define VAI_INDIETRO -0.15
 
-#define RADIUS_LOCAL 2
+#define RADIUS_LOCAL 3
 #define SEARCH_SPACE_GRANULARITY 20
-#define DYNAMIC_DELTA_T 0.2
+#define DYNAMIC_DELTA_T 0.5
 #define RH_RADIUS 0.63
 
 
@@ -43,14 +43,13 @@ public:
     };
 
 
-    int empiricFrontStatus, empiricBackStatus, neuralBehaviorStatus;
+    int empiricFrontStatus, empiricBackStatus, dwaBehaviorStatus, neuralBehaviorStatus;
 
     explicit ObstacleAvoidance(InverseKinematic* i, QObject *parent = 0);
     void setSlamModule(SLAM::SLAMModule *slam);
     void handleObstacle(const Data::SonarData &sonar, Data::RobotState *actualState, const Data::Action *actualAction, Data::Pose *actualFrontier);
     void handleNeuralNetwork();
     void applyPredictedAction(int predictedMovement);
-    void setMovementType(int type);
 
 
     void checkSonarData(const Data::SonarData &sonar);
@@ -76,6 +75,7 @@ private slots:
     void handleEmpiricSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
     void handleDynamicWindowSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction,  Data::Pose *actualFrontier);
 
+    void setMovementType(int type);
 
 private:
     enum obstacleAlgEnum {EMPIRIC,DWA,NEURAL};

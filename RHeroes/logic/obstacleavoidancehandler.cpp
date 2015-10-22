@@ -15,7 +15,7 @@
 using namespace Data;
 using namespace SLAM::Geometry;
 
-//QString typeMovementEnumString[16] = {"LLLFRRR","LLLFR","LLLF","LLL","LL","LFRRR","LFR","LF","L","FRRR","FR","F","RRR","RR","R","S"};
+QString typeMovementEnumString[16] = {"LLLFRRR","LLLFR","LLLF","LLL","LL","LFRRR","LFR","LF","L","FRRR","FR","F","RRR","RR","R","S"};
 QString statusEnumString[3] = {"DEACTIVATED","FIRSTTIME","EXEC"};
 
 ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, QObject *parent) : QObject(parent)
@@ -23,10 +23,11 @@ ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, QObject
     empiricFrontStatus = DEACTIVATED;
     empiricBackStatus = DEACTIVATED;
     neuralBehaviorStatus = DEACTIVATED;
+    dwaBehaviorStatus = DEACTIVATED;
     predictedMovement = S;
     oldPredictedMovement = S;
     this->inverseKinematicModule = inverseKinematic;
-    algorithmType = EMPIRIC;
+    algorithmType = DWA;
     if (algorithmType == NEURAL)
     {
         handleNeuralNetwork();
@@ -106,14 +107,14 @@ Data::Pose ObstacleAvoidance::forwardKinematics(const Data::Pose &from, double v
     const double dt = time, L = WHEEL_BASE;
     double x, y, theta;
     if(almostEqual(vl, vr)) {
-        x = from.x() - vr * DELTA_T * sin(from.theta());
-        y = from.y() + vr * DELTA_T * cos(from.theta());
+        x = from.x() - vr * dt * sin(from.theta());
+        y = from.y() + vr * dt * cos(from.theta());
         theta = from.theta();
     } else {
         const double R = .5 * L * (vr + vl) / (vr - vl);
         const double w = (vr - vl) / L;
-        x = from.x() + R * std::cos(from.theta() + w * dt) - R * std::cos(from.theta());
-        y = from.y() + R * std::sin(from.theta() + w * dt) - R * std::sin(from.theta());
+        x = from.x() + R * cos(from.theta() + w * dt) - R * cos(from.theta());
+        y = from.y() + R * sin(from.theta() + w * dt) - R * sin(from.theta());
         theta = wrapRad(from.theta() + w * dt);
     }
     return Data::Pose(x, y, theta);
@@ -509,15 +510,6 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
 
 
 //DWA
-bool ObstacleAvoidance::isReachablePose(Pose predictedPose, Pose actualPose)
-{
-    Point* predictedPosePoint = new Point(predictedPose.getX(), predictedPose.getY());
-    Point* actualPosePoint = new Point(actualPose.getX(),actualPose.getY());
-
-    bool isReachable = slam->getMap(true).isReachable(*actualPosePoint,*predictedPosePoint,P3AT_RADIUS);
-
-    return isReachable;
-}
 
 void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier)
 {
@@ -529,54 +521,83 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
     double leftSpeed = actualState->getLeftSpeed();
     double rightSpeed = actualState->getRightSpeed();
 
-    if (leftSpeed != 0 && rightSpeed != 0)
+    emit sigChangeActionStartTimestamp(-1);
+
+    if (leftSpeed !=0 && rightSpeed!=0)
     {
-        emit sigChangeActionStartTimestamp(-1);
 
         Pose actualPose = actualState->getPose();
-        actualMovement = (movementStateEnum)getActualMovement(leftSpeed,rightSpeed);
-
-
         Pose predictedPose = forwardKinematics(actualPose,leftSpeed, rightSpeed,DYNAMIC_DELTA_T);
 
-        //ldbg <<"Obstacle Avoidance - dynamic: predicted pose is (" << predictedPose.getX() << ", " <<predictedPose.getY() << ")" << endl;
+        ldbg<<"DWA: Predicted pose is (" << predictedPose.getX() << "," << predictedPose.getY() <<
+              "," << predictedPose.getTheta() << "), behavior status is: " << statusEnumString[dwaBehaviorStatus] << ", sonar obstacle detection " << isFrontObstacle << endl;
 
-        if (!isReachablePose(predictedPose, actualPose) ||
-                (sonar.getPosition() == SonarData::Front && actualMovement != BACK && sonar.getMinDistance()<THRESHOLD))
+
+        if (!isReachablePose(predictedPose, actualPose) || isFrontObstacle)
         {
-            emit sigUpdateSonarData(sonar);
-            emit sigStopRobot(true);
-
-            ldbg <<"Obstacle Avoidance - dynamic: Start DWA. Actual Pose is ("<<
-                   actualPose.getX() << ", " << actualPose.getY() <<", " << actualPose.getTheta() <<")"<<endl;
-
-            QVector<QPair< double,double> > searchSpace = calculateSearchSpace(sonar);
-
-            int bestValue = calculateBestVelocity(searchSpace);
-            if (bestValue == -1)
+            if (dwaBehaviorStatus == DEACTIVATED)
             {
-                //ldbg <<"Obstacle Avoidance - dynamic: DWA failed." <<endl;
-                emit sigMoveRobot(0,-VAI_AVANTI,0);
+                emit sigStopRobot(true);
+                dwaBehaviorStatus = FIRSTTIME;
             }
-            else
-            {
-                Pose bestPose = forwardKinematics(actualPose,searchSpace[bestValue].first,searchSpace[bestValue].second,DYNAMIC_DELTA_T);
-                //ldbg <<"Obstacle Avoidance - dynamic: Best pose is (" << bestPose.getX() << ", " << bestPose.getY() << endl;
-                double trasl = bestPose.getDistance(actualPose);
-                //ldbg <<"Obstacle Avoidance - dynamic: I must traslate of " << trasl << endl;
-                double rot = computeRotationFromPoses(actualPose,bestPose);
-                //ldbg <<"Obstacle Avoidance - dynamic: I must rotate of " << rot << endl;
-                emit sigMoveRobot(rot, trasl,0);
-            }
-            emit sigChangeRobotControlType(NORMAL);
 
+            if (dwaBehaviorStatus == FIRSTTIME)
+            {
+                emit sigUpdateSonarData(sonar);
+
+                ldbg <<"DWA: Start. Actual Pose is ("<<
+                       actualPose.getX() << ", " << actualPose.getY() <<", " << actualPose.getTheta() <<")"<<endl;
+
+                QVector<QPair< double,double> > searchSpace = calculateSearchSpace(sonar);
+
+                int bestValue = calculateBestVelocity(searchSpace);
+                if (bestValue == -1)
+                {
+                    ldbg <<"DWA: No position found." <<endl;
+                    dwaBehaviorStatus = EXEC;
+                    emit sigMoveRobot(0,VAI_INDIETRO,0);
+
+                }
+                else
+                {
+                    Pose bestPose = forwardKinematics(actualPose,searchSpace[bestValue].first,searchSpace[bestValue].second,DYNAMIC_DELTA_T);
+                    ldbg <<"DWA: Best pose is (" << bestPose.getX() << ", " << bestPose.getY() <<  ", " << bestPose.getTheta() << ") " << endl;
+                    double trasl = bestPose.getDistance(actualPose);
+                    double rot = computeRotationFromPoses(actualPose,bestPose);
+
+                    ldbg <<"DWA: I must rotate of " << rot << endl;
+                    ldbg <<"DWA: I must traslate of " << trasl << endl;
+
+                    dwaBehaviorStatus = EXEC;
+                    emit sigMoveRobot(rot, trasl,0);
+                }
+                emit sigChangeRobotControlType(NORMAL);
+            }
         }
-        else
+    }
+    else
+    {
+        if (dwaBehaviorStatus == EXEC)
+            dwaBehaviorStatus = DEACTIVATED;
+        if (actualAction == NULL)
         {
-            ////ldbg<<"Robot controller - dynamic: No obstacle. ok!"<<endl;
+            ldbg <<"DWA: Nothing to do. Restart exploration!" << endl;
+            emit sigRestartExploration();
         }
     }
 }
+
+
+bool ObstacleAvoidance::isReachablePose(Pose predictedPose, Pose actualPose)
+{
+    Point* predictedPosePoint = new Point(predictedPose.getX(), predictedPose.getY());
+    Point* actualPosePoint = new Point(actualPose.getX(),actualPose.getY());
+
+    bool isReachable = slam->getMap(true).isReachable(*actualPosePoint,*predictedPosePoint,P3AT_RADIUS);
+
+    return isReachable;
+}
+
 
 QVector<QPair<double,double> > ObstacleAvoidance::calculateSearchSpace(const Data::SonarData &sonar)
 {
@@ -617,7 +638,7 @@ QVector<ObstacleAvoidance::LocalMapEl> ObstacleAvoidance::getLocalMap(const Pose
 
             Pose deltaPose(deltaX,deltaY,angle);
 
-            if (isReachablePose(actualPose,deltaPose))
+            if (isReachablePose(deltaPose,actualPose))
             {
                 localMap[i].distance = step*radius;
                 localMap[i].x = deltaX;
@@ -632,10 +653,10 @@ QVector<ObstacleAvoidance::LocalMapEl> ObstacleAvoidance::getLocalMap(const Pose
         i++;
     }
 
-    //    //Print local map
-    //    for (double i=0; i<SEARCH_SPACE_GRANULARITY; i++)
-    //        //ldbg << "Obstacle Avoidance - dynamic: Angle = "<< localMap[i].angle << ", X = " << localMap[i].x
-    //             << " , Y = " << localMap[i].y << ", Distance = " << localMap[i].distance << endl;
+    //Print local map
+    for (double i=0; i<SEARCH_SPACE_GRANULARITY; i++)
+        ldbg << "DWA: Angle = "<< localMap[i].angle << ", X = " << localMap[i].x
+             << " , Y = " << localMap[i].y << ", Distance = " << localMap[i].distance << endl;
 
 
     return localMap;
@@ -662,8 +683,8 @@ QVector<QPair<double, double> > ObstacleAvoidance::getLocalReachableSearchSpace(
             double leftSpeed = (MED_SPEED/RH_RADIUS)*(1 - (WHEEL_BASE/2)*curvature);
             double rightSpeed = (MED_SPEED/RH_RADIUS)*(1 + (WHEEL_BASE/2)*curvature);
 
-            ////ldbg << "Obstacle Avoidance - dynamic: Pose (" << localMap[i].x << " , " << localMap[i].y << "), Velocity ("
-            //<< leftSpeed << " , " << rightSpeed << ") "<< endl;
+            ldbg << "DWA: Pose (" << localMap[i].x << " , " << localMap[i].y << "), Velocity ("
+                 << leftSpeed << " , " << rightSpeed << ") "<< endl;
 
             searchSpace[i].first = leftSpeed;
             searchSpace[i].second = rightSpeed;
@@ -686,21 +707,21 @@ int ObstacleAvoidance::calculateBestVelocity(QVector<QPair< double,double> > sea
         if (searchSpace[counter].first == 0 && searchSpace[counter].second == 0)
             continue;
 
-        ////ldbg << "Obstacle Avoidance - dynamic: Actual Frontier is (" << actualFrontier->getX() << ", " << actualFrontier->getY() <<", " << actualFrontier->getTheta() << ") " << endl;
+        ldbg << "DWA: Actual Frontier is (" << actualFrontier->getX() << ", " << actualFrontier->getY() <<", " << actualFrontier->getTheta() << ") " << endl;
         Pose predictedPose = forwardKinematics(actualState->getPose(),searchSpace[counter].first, searchSpace[counter].second,DYNAMIC_DELTA_T);
 
         distance = predictedPose.getDistance(*actualFrontier);
         targetHeading = angularDistance(actualFrontier->getTheta(),predictedPose.getTheta());
         clearance = searchSpace[counter].first;
 
-        ////ldbg << "Obstacle Avoidance - dynamic: Predicted pose (" << predictedPose.getX() << " , " << predictedPose.getY() << ", " << predictedPose.getTheta() << "), Velocity ("
-        // << searchSpace[counter].first << " , " << searchSpace[counter].second << ") "<< endl;
-        ////ldbg << "Parameters: Target Heading= "<< targetHeading << " Distance= " << distance << " Clearance= " << clearance<<endl;
+        ldbg << "DWA: Predicted pose (" << predictedPose.getX() << " , " << predictedPose.getY() << ", " << predictedPose.getTheta() << "), Velocity ("
+             << searchSpace[counter].first << " , " << searchSpace[counter].second << ") "<< endl;
+        ldbg << "Parameters: Target Heading= "<< targetHeading << " Distance= " << distance << " Clearance= " << clearance<<endl;
         double cost = distance + clearance - targetHeading;
-        ////ldbg << "Cost = " << cost << endl;
+        ldbg << "Cost = " << cost << endl;
         if (cost>=bestCost)
         {
-            ////ldbg << "Is best cost!"<<endl;
+            ldbg << "DWA: Is best cost!"<<endl;
             bestCost = cost;
             bestValue = counter;
         }

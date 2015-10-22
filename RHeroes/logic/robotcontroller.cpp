@@ -365,7 +365,7 @@ void RobotController::insertActionToPerform(Action::ActionType type, double valu
 void RobotController::onPerformActionRCM(PathPlanner::AbstractAction *action)
 {
     sonarStatus = ON;
-    if (obstacleAvoidance->empiricFrontStatus >0 && normalActionQueue->size()!=0)
+    if (obstacleAvoidance->empiricFrontStatus >0 && obstacleAvoidance->neuralBehaviorStatus>0 && obstacleAvoidance->dwaBehaviorStatus>0 && normalActionQueue->size()!=0)
     {
         ldbg << "Robot Controller: Ignore perform action" << endl;
         return;
@@ -571,7 +571,7 @@ void RobotController::onStateUpdated()
             stopRobot(false);
             emit sigChangeStatetExplorationRCM(true);
         }
-        if (haveReceivedWaypoint && obstacleAvoidance->empiricFrontStatus == 0)
+        if (haveReceivedWaypoint && (obstacleAvoidance->empiricFrontStatus == 0 && obstacleAvoidance->neuralBehaviorStatus==0 && obstacleAvoidance->dwaBehaviorStatus == 0))
             notifyAfterWaypoint();
     }
     isJustChanged = FALSE;
