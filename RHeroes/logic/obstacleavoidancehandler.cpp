@@ -27,7 +27,7 @@ ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, QObject
     predictedMovement = S;
     oldPredictedMovement = S;
     this->inverseKinematicModule = inverseKinematic;
-    algorithmType = DWA;
+    algorithmType = NEURAL;
     if (algorithmType == NEURAL)
     {
         handleNeuralNetwork();
@@ -776,14 +776,20 @@ void ObstacleAvoidance::handleNeuralSonarData(const Data::SonarData &sonar,Data:
 
         emit sigChangeRobotControlType(NORMAL);
     }
-    else if (actualAction == NULL && neuralBehaviorStatus > DEACTIVATED)
+    else
     {
-        ldbg << "FANN: Restart exploration."<< endl;
-        neuralBehaviorStatus = DEACTIVATED;
-        predictedMovement = S;
-        oldPredictedMovement = S;
-        emit sigStopRobot(true);
-        emit sigRestartExploration();
+        if (neuralBehaviorStatus == EXEC)
+        {
+            neuralBehaviorStatus = DEACTIVATED;
+            predictedMovement = S;
+            oldPredictedMovement = S;
+        }
+        if (actualAction == NULL)
+        {
+            ldbg << "FANN: Restart exploration."<< endl;
+            emit sigStopRobot(true);
+            emit sigRestartExploration();
+        }
     }
 
 }
