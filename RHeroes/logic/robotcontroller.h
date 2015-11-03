@@ -31,9 +31,9 @@
 
 #define TELEOPERATION_TIMEOUT_MSEC  5000
 
-#define ANGLE_TOL 0.1
+#define ANGLE_TOL 15
 #define TRASL_TOL 0.1
-#define SPEED_LIMIT_ANGLE 10
+#define SPEED_LIMIT_ANGLE 100
 
 #define UPDATE_STATUS true
 

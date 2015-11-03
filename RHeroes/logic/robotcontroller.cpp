@@ -170,7 +170,7 @@ void RobotController::onSensorData(const Message &data)
         const StateData &state = (const StateData &)data;
         handleStateData(state);
     }
-    else if(typeid(data) == typeid(const SonarData &))
+    else if(typeid(data) == typeid(const SonarData &) )
     {
         const SonarData &sonar = (const SonarData &)data;
 
@@ -178,9 +178,16 @@ void RobotController::onSensorData(const Message &data)
         if (!normalActionQueue->isEmpty())
             actualAction = normalActionQueue->head();
 
-        obstacleAvoidance->handleObstacle(sonar,actualState,actualAction,actualFrontier);
+        obstacleAvoidance->handleObstacle(sonar, actualState,actualAction,actualFrontier);
+    }
+
+    else if(typeid(data) == typeid(const LaserData &) )
+    {
+        Data::LaserData &laser = (LaserData &)data;
+        obstacleAvoidance->setLaser(laser);
 
     }
+
     else if(typeid(data) == typeid(const WirelessMessage &))
     {
         handleWirelessData(data);
@@ -454,7 +461,7 @@ void RobotController::doMovement(double leftSpeed, double rightSpeed)
 
 void RobotController::stopRobot(bool saveState)
 {
-    //ldbg << "RobotController: stop robot."<<endl;
+    ldbg << "RobotController: stop robot."<<endl;
 
     doMovement(0,0);
     emit sigChangeMovementType(S);
@@ -463,7 +470,7 @@ void RobotController::stopRobot(bool saveState)
         saveRobotState();
     }
 
-    while(normalActionQueue->isEmpty() == FALSE){
+    while(!normalActionQueue->isEmpty()){
         delete normalActionQueue->dequeue();
     }
 
@@ -855,7 +862,7 @@ void RobotController::controlRotation(const Action &rotation) {
         angleToReach = wrapRad(angleToReach);
 
         double performedAngle =  actualState->getPose().getTheta();
-        double distance = angularDistance(performedAngle, angleToReach);
+        double distance = fromRadiantToDegree(angularDistance(performedAngle, angleToReach));
 
         ldbg << "Robot Controller - controlRotation: Angular distance = "<< distance <<endl;
 

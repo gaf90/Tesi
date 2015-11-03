@@ -52,7 +52,7 @@ public:
      */
     double getResolution() const;
 
-private:
+public:
     double timestamp, fov, resolution;
     QList<double> readings;
 

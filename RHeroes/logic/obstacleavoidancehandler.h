@@ -16,18 +16,19 @@
 #include <libraries/fann/doublefann.h>
 
 #define THRESHOLD 0.22
-#define RUOTASINISTRA_MIN 10
-#define RUOTASINISTRA_MED 15
-#define RUOTASINISTRA_MAX 20
-#define RUOTADESTRA_MIN -10
-#define RUOTADESTRA_MED -15
-#define RUOTADESTRA_MAX -20
+#define LASER_THRESHOLD 0.4
+#define RUOTASINISTRA_MIN 20
+#define RUOTASINISTRA_MED 30
+#define RUOTASINISTRA_MAX 40
+#define RUOTADESTRA_MIN -20
+#define RUOTADESTRA_MED -30
+#define RUOTADESTRA_MAX -40
 #define VAI_AVANTI 0.5
 #define VAI_INDIETRO -0.15
 
 #define RADIUS_LOCAL 3
 #define SEARCH_SPACE_GRANULARITY 20
-#define DYNAMIC_DELTA_T 0.5
+#define DYNAMIC_DELTA_T 1.5
 #define RH_RADIUS 0.63
 
 
@@ -50,6 +51,7 @@ public:
     void handleObstacle(const Data::SonarData &sonar, Data::RobotState *actualState, const Data::Action *actualAction, Data::Pose *actualFrontier);
     void handleNeuralNetwork();
     void applyPredictedAction(int predictedMovement);
+    void setLaser(Data::LaserData &laser);
 
 
     void checkSonarData(const Data::SonarData &sonar);
@@ -64,8 +66,8 @@ signals:
 private slots:
     bool isReachablePose(Data::Pose predictedPose, Data::Pose actualPose);
     QVector<QPair<double, double> > calculateSearchSpace(const Data::SonarData &sonar);
-    QVector<ObstacleAvoidance::LocalMapEl> getLocalMap(const Data::Pose actualPose);
-    QVector<QPair<double, double> > getLocalReachableSearchSpace(QVector<LocalMapEl> localMap);
+    QVector<ObstacleAvoidance::LocalMapEl> getLocalMap(const Data::Pose actualPose, QList<double> actualLaser);
+    QVector<QPair<double, double> > getLocalReachableSearchSpace();
     int calculateBestVelocity(QVector<QPair<double, double> > searchSpace);
     int getActualMovement(double leftSpeed, double rightSpeed);
     void empiricObstacleHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL);
@@ -93,12 +95,15 @@ private:
     obstacleAlgEnum algorithmType;
 
     Data::RobotState *actualState;
+    Data::LaserData *actualLaser;
     const Data::Action*actualAction;
     Data::Pose *actualFrontier;
 
     InverseKinematic *inverseKinematicModule;
 
     SLAM::SLAMModule *slam;
+
+    QVector<LocalMapEl> localMap;
 
     int num_input;
     int num_output;
@@ -110,6 +115,7 @@ private:
 
     bool isFrontObstacle;
     bool isBackObstacle;
+    bool isLaser;
 
 
 };
