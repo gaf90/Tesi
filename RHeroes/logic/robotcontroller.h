@@ -31,7 +31,6 @@
 
 #define TELEOPERATION_TIMEOUT_MSEC  5000
 
-#define ANGLE_TOL 15
 #define TRASL_TOL 0.1
 #define SPEED_LIMIT_ANGLE 100
 
@@ -92,12 +91,6 @@ public:
     void controlTraslationStall(double distCovered, const Data::Action &todo, double distToCover);
 private:
    //=== Movement Helper ===//
-   /**
-    * This method sets the speeds of the wheels and let the robot moves.
-    * @param leftSpeed the speed of the left wheel.
-    * @param rightWheel the speed of the right wheel.
-    */
-   void doMovement(double leftSpeed, double rightSpeed);
 
    /**
     * Fake method for the OpenLoop. It is not implemented.
@@ -244,6 +237,7 @@ public slots:
     void setLastSonarData(Data::SonarData sonar);
     void stopRobot(bool saveState);
     void moveRobot(double angle1, double translation, double angle2);
+    void doMovement(double leftSpeed, double rightSpeed);
 
 private slots:
 

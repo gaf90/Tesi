@@ -16,19 +16,32 @@
 #include <libraries/fann/doublefann.h>
 
 #define THRESHOLD 0.22
-#define LASER_THRESHOLD 0.4
-#define RUOTASINISTRA_MIN 20
-#define RUOTASINISTRA_MED 30
-#define RUOTASINISTRA_MAX 40
-#define RUOTADESTRA_MIN -20
-#define RUOTADESTRA_MED -30
-#define RUOTADESTRA_MAX -40
-#define VAI_AVANTI 0.5
-#define VAI_INDIETRO -0.15
+#define LASER_THRESHOLD 0.5
+#define LASER_MAX_RANGE 10
+#define DWA_TIME 1
+#define DWA_MAX_VELOCITY 0.5
+#define DWA_STEP 0.2
+#define DWA_SAFETY 5
+#define DWA_DISTANCE 0.05
+
+#define DWA_SIGMA 1
+#define DWA_TARGET 1
+#define DWA_CLEARANCE 0.5
+#define DWA_VELOCITY 0.5
+
+
+#define ANGLE_TOL 15
+#define ROTATELEFT_MIN 5 + ANGLE_TOL
+#define ROTATELEFT_MED 10 + ANGLE_TOL
+#define ROTATELEFT_MAX 20 + ANGLE_TOL
+#define ROTATERIGHT_MIN -5 - ANGLE_TOL
+#define ROTATERIGHT_MED -10 - ANGLE_TOL
+#define ROTATERIGHT_MAX -20 - ANGLE_TOL
+#define GO_STRAIGHT 1
+#define GO_BACK -0.3
 
 #define RADIUS_LOCAL 3
-#define SEARCH_SPACE_GRANULARITY 20
-#define DYNAMIC_DELTA_T 1.5
+#define SEARCH_SPACE_GRANULARITY 36
 #define RH_RADIUS 0.63
 
 
@@ -46,15 +59,16 @@ public:
 
     int empiricFrontStatus, empiricBackStatus, dwaBehaviorStatus, neuralBehaviorStatus;
 
-    explicit ObstacleAvoidance(InverseKinematic* i, QObject *parent = 0);
+    explicit ObstacleAvoidance(InverseKinematic* i, int angleTol, QObject *parent = 0);
     void setSlamModule(SLAM::SLAMModule *slam);
     void handleObstacle(const Data::SonarData &sonar, Data::RobotState *actualState, const Data::Action *actualAction, Data::Pose *actualFrontier);
     void handleNeuralNetwork();
     void applyPredictedAction(int predictedMovement);
     void setLaser(Data::LaserData &laser);
-
-
     void checkSonarData(const Data::SonarData &sonar);
+    bool checkLaserData();
+    int getLaserID(double angle);
+    bool checkSafePose(int laserID, LocalMapEl actualSample);
 signals:
     void sigChangeActionStartTimestamp(int);
     void sigChangeRobotControlType(int);
@@ -62,13 +76,11 @@ signals:
     void sigMoveRobot(double,double,double);
     void sigStopRobot(bool);
     void sigRestartExploration();
+    void sigDoMovement(double, double);
 
 private slots:
-    bool isReachablePose(Data::Pose predictedPose, Data::Pose actualPose);
-    QVector<QPair<double, double> > calculateSearchSpace(const Data::SonarData &sonar);
-    QVector<ObstacleAvoidance::LocalMapEl> getLocalMap(const Data::Pose actualPose, QList<double> actualLaser);
-    QVector<QPair<double, double> > getLocalReachableSearchSpace();
-    int calculateBestVelocity(QVector<QPair<double, double> > searchSpace);
+    void calculateSearchSpace(Data::Pose actualPose);
+    int calculateBestVelocity();
     int getActualMovement(double leftSpeed, double rightSpeed);
     void empiricObstacleHandler(double distanceRightR, double distanceLeft, double distanceRight, double distanceFront, double distanceLeftL);
     Data::Pose forwardKinematics(const Data::Pose &from, double vr, double vl, double time);
@@ -76,7 +88,6 @@ private slots:
     void handleNeuralSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
     void handleEmpiricSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier);
     void handleDynamicWindowSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction,  Data::Pose *actualFrontier);
-
     void setMovementType(int type);
 
 private:
@@ -98,12 +109,16 @@ private:
     Data::LaserData *actualLaser;
     const Data::Action*actualAction;
     Data::Pose *actualFrontier;
+    Data::Pose actualPose, bestPose;
 
     InverseKinematic *inverseKinematicModule;
 
     SLAM::SLAMModule *slam;
 
-    QVector<LocalMapEl> localMap;
+
+    QList<double> laserReadings;
+    QList<LocalMapEl> searchSpacePoses;
+    QList<QPair<double,double> > searchSpaceVelocities;
 
     int num_input;
     int num_output;
@@ -113,10 +128,21 @@ private:
     int max_epochs;
     int epochs_between_reports;
 
-    bool isFrontObstacle;
+    int angleTol;
+
+    bool isSonarObstacle;
     bool isBackObstacle;
     bool isLaser;
 
+    double laserDistance;
+    double actualDistance;
+    bool safePose;
+    double bestLeftSpeed;
+    double bestRightSpeed;
+
+    double bestX;
+    double bestY;
+    double bestTheta;
 
 };
 

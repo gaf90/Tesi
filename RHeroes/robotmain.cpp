@@ -108,8 +108,9 @@ struct config_t parseArgs(const QStringList &args) {
 }
 
 #define PREFIX
-//#include "test/coordination/testintersect.h"
+
 #include "test/pathplanning/RRT/testrrtnode.h"
+
 int main(int argc, char *argv[])
 {
     ::setlocale(LC_ALL, "en");

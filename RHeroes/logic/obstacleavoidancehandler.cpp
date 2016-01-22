@@ -22,7 +22,7 @@ using namespace std;
 QString typeMovementEnumString[16] = {"LLLFRRR","LLLFR","LLLF","LLL","LL","LFRRR","LFR","LF","L","FRRR","FR","F","RRR","RR","R","S"};
 QString statusEnumString[3] = {"DEACTIVATED","FIRSTTIME","EXEC"};
 
-ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, QObject *parent) : QObject(parent)
+ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, int angleTol, QObject *parent) : QObject(parent)
 {  
     empiricFrontStatus = DEACTIVATED;
     empiricBackStatus = DEACTIVATED;
@@ -30,13 +30,17 @@ ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, QObject
     dwaBehaviorStatus = DEACTIVATED;
     predictedMovement = S;
     oldPredictedMovement = S;
+    this->angleTol = angleTol;
     this->inverseKinematicModule = inverseKinematic;
-    algorithmType = EMPIRIC;
+    algorithmType = NEURAL;
     if (algorithmType == NEURAL)
     {
         handleNeuralNetwork();
     }
     isLaser = false;
+    bestX = 0;
+    bestY = 0;
+    bestTheta = 0;
 }
 
 void ObstacleAvoidance::handleNeuralNetwork()
@@ -103,7 +107,7 @@ void ObstacleAvoidance::handleObstacle(const Data::SonarData &sonar, Data::Robot
 
 void ObstacleAvoidance::checkSonarData(const Data::SonarData &sonar)
 {
-    isFrontObstacle = sonar.getPosition() == SonarData::Front && (sonar.getFront(0) < THRESHOLD || sonar.getFront(1) < THRESHOLD || sonar.getFront(2) < THRESHOLD ||sonar.getFront(3) < THRESHOLD ||sonar.getFront(4) < THRESHOLD);
+    isSonarObstacle = sonar.getPosition() == SonarData::Front && (sonar.getFront(0) < THRESHOLD || sonar.getFront(1) < THRESHOLD || sonar.getFront(2) < THRESHOLD ||sonar.getFront(3) < THRESHOLD ||sonar.getFront(4) < THRESHOLD);
     isBackObstacle =  sonar.getPosition() == SonarData::Back && (sonar.getBack(0) < THRESHOLD || sonar.getBack(1) < THRESHOLD || sonar.getBack(2) < THRESHOLD || sonar.getBack(3) < THRESHOLD || sonar.getBack(4) < THRESHOLD);
 }
 
@@ -155,7 +159,7 @@ void ObstacleAvoidance::handleEmpiricSonarData(const Data::SonarData &sonar,Data
             {
                 emit sigUpdateSonarData(sonar);
                 empiricBackStatus = EXEC;
-                emit sigMoveRobot(0,VAI_AVANTI,0);
+                emit sigMoveRobot(0,GO_STRAIGHT,0);
             }
 
             emit sigChangeRobotControlType(NORMAL);
@@ -168,7 +172,7 @@ void ObstacleAvoidance::handleEmpiricSonarData(const Data::SonarData &sonar,Data
     }
     else
     {
-        if (isFrontObstacle)
+        if (isSonarObstacle)
         {
             if (empiricFrontStatus == DEACTIVATED)
             {
@@ -212,6 +216,8 @@ int ObstacleAvoidance::getActualMovement(double leftSpeed, double rightSpeed)
     {
         int type = actualAction->getType();
         double value = actualAction->getValue();
+        if (type == Action::Rotation)
+            value = fromRadiantToDegree(value);
 
         ldbg <<"Robot Controller: Next action to do is a " << type << " with a value " << value<<endl;
 
@@ -242,7 +248,7 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                         {
                             empiricFrontStatus = EXEC;
                             ////ldbg <<"Caso LL_L_F_R_RR: Ostacoli ovunque"<<endl;
-                            emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
+                            emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MAX);
                             sensorDataCaptured = LLLFRRR;
                             ////ldbg<< typeMovement <<endl;
                         }
@@ -258,8 +264,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                         {
                             empiricFrontStatus = EXEC;
                             ////ldbg <<"Caso LL_L_F_R: Estrema destra libera"<<endl;
-                            emit sigMoveRobot(0,VAI_INDIETRO,0);
-                            emit sigMoveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
+                            emit sigMoveRobot(0,GO_BACK,0);
+                            emit sigMoveRobot(ROTATERIGHT_MAX,GO_STRAIGHT,0);
                             sensorDataCaptured = LLLFR;
                             ////ldbg<< typeMovement <<endl;
                         }
@@ -276,8 +282,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                     {
                         empiricFrontStatus = EXEC;
                         ldbg <<"Caso LL_L_F: Destra libera"<<endl;
-                        emit sigMoveRobot(0,VAI_INDIETRO,0);
-                        emit sigMoveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
+                        emit sigMoveRobot(0,GO_BACK,0);
+                        emit sigMoveRobot(ROTATERIGHT_MAX,GO_STRAIGHT,0);
                         sensorDataCaptured = LLLF;
                     }
                     else if(empiricFrontStatus == EXEC && sensorDataCaptured!=LLLF)
@@ -293,8 +299,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                 {
                     empiricFrontStatus = EXEC;
                     ldbg <<"Caso LL_L: Sinistra occupata"<<endl;
-                    emit sigMoveRobot(0,VAI_INDIETRO,0);
-                    emit sigMoveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
+                    emit sigMoveRobot(0,GO_BACK,0);
+                    emit sigMoveRobot(ROTATERIGHT_MED,GO_STRAIGHT,0);
                     sensorDataCaptured = LLL;
                     ////ldbg<< typeMovement <<endl;
                 }
@@ -311,8 +317,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
             {
                 empiricFrontStatus = EXEC;
                 ldbg <<"Caso LL: Sinistra occupata"<<endl;
-                emit sigMoveRobot(0,VAI_INDIETRO,0);
-                emit sigMoveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
+                emit sigMoveRobot(0,GO_BACK,0);
+                emit sigMoveRobot(ROTATERIGHT_MED,GO_STRAIGHT,0);
                 sensorDataCaptured = LL;
                 ////ldbg<< typeMovement <<endl;
             }
@@ -335,8 +341,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                     {
                         empiricFrontStatus = EXEC;
                         ldbg <<"Caso L_F_R_RR: Possibile pertugio estrema sinistra"<<endl;
-                        emit sigMoveRobot(0,VAI_INDIETRO,0);
-                        emit sigMoveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
+                        emit sigMoveRobot(0,GO_BACK,0);
+                        emit sigMoveRobot(ROTATELEFT_MAX,GO_STRAIGHT,0);
                         sensorDataCaptured = LFRRR;
                         ////ldbg<< typeMovement <<endl;
                     }
@@ -352,7 +358,7 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                     {
                         empiricFrontStatus = EXEC;
                         ldbg <<"Caso L_F_R: Estremi liberi. Vado indietro"<<endl;
-                        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
+                        emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MAX);
                         sensorDataCaptured = LFR;
                         ////ldbg<< typeMovement <<endl;
                     }
@@ -369,8 +375,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                 {
                     empiricFrontStatus = EXEC;
                     ldbg <<"Caso L_F: Destra libera"<<endl;
-                    emit sigMoveRobot(0,VAI_INDIETRO,0);
-                    emit sigMoveRobot(RUOTADESTRA_MAX,VAI_AVANTI,0);
+                    emit sigMoveRobot(0,GO_BACK,0);
+                    emit sigMoveRobot(ROTATERIGHT_MAX,GO_STRAIGHT,0);
                     sensorDataCaptured = LF;
                     ////ldbg<< typeMovement <<endl;
                 }
@@ -387,8 +393,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
             {
                 empiricFrontStatus = EXEC;
                 ldbg <<"Caso L: Sinistra occupata"<<endl;
-                emit sigMoveRobot(0,VAI_INDIETRO,0);
-                emit sigMoveRobot(RUOTADESTRA_MED,VAI_AVANTI,0);
+                emit sigMoveRobot(0,GO_BACK,0);
+                emit sigMoveRobot(ROTATERIGHT_MED,GO_STRAIGHT,0);
                 sensorDataCaptured = L;
                 ////ldbg<< typeMovement <<endl;
             }
@@ -410,8 +416,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                 {
                     empiricFrontStatus = EXEC;
                     ldbg <<"Caso F_R_RR: Sinistra libera"<<endl;
-                    emit sigMoveRobot(0,VAI_INDIETRO,0);
-                    emit sigMoveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
+                    emit sigMoveRobot(0,GO_BACK,0);
+                    emit sigMoveRobot(ROTATELEFT_MAX,GO_STRAIGHT,0);
                     sensorDataCaptured = FRRR;
                     ////ldbg<< typeMovement <<endl;
                 }
@@ -427,8 +433,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
                 {
                     empiricFrontStatus = EXEC;
                     ldbg <<"Caso F_R: Sinistra libera"<<endl;
-                    emit sigMoveRobot(0,VAI_INDIETRO,0);
-                    emit sigMoveRobot(RUOTASINISTRA_MAX,VAI_AVANTI,0);
+                    emit sigMoveRobot(0,GO_BACK,0);
+                    emit sigMoveRobot(ROTATELEFT_MAX,GO_STRAIGHT,0);
                     sensorDataCaptured = FR;
                     ////ldbg<< typeMovement <<endl;
                 }
@@ -446,7 +452,7 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
             {
                 empiricFrontStatus = EXEC;
                 ldbg <<"Caso F: Caso indecisione. Vado indietro."<<endl;
-                emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MIN);
+                emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MIN);
                 sensorDataCaptured = F;
                 ////ldbg<< typeMovement <<endl;
             }
@@ -465,8 +471,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
             {
                 empiricFrontStatus = EXEC;
                 ////ldbg <<"Caso R_RR: Sinistra libera"<<endl;
-                emit sigMoveRobot(0,VAI_INDIETRO,0);
-                emit sigMoveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
+                emit sigMoveRobot(0,GO_BACK,0);
+                emit sigMoveRobot(ROTATELEFT_MIN,GO_STRAIGHT,0);
                 sensorDataCaptured = RRR;
                 ////ldbg<< typeMovement <<endl;
             }
@@ -482,8 +488,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
             {
                 empiricFrontStatus = EXEC;
                 ldbg <<"Caso R: Sinistra libera"<<endl;
-                emit sigMoveRobot(0,VAI_INDIETRO,0);
-                emit sigMoveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
+                emit sigMoveRobot(0,GO_BACK,0);
+                emit sigMoveRobot(ROTATELEFT_MED,GO_STRAIGHT,0);
                 sensorDataCaptured = R;
                 ////ldbg<< typeMovement <<endl;
             }
@@ -500,8 +506,8 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
         {
             empiricFrontStatus = EXEC;
             ldbg <<"Caso_RR: Sinistra libera"<<endl;
-            emit sigMoveRobot(0,VAI_INDIETRO,0);
-            emit sigMoveRobot(RUOTASINISTRA_MED,VAI_AVANTI,0);
+            emit sigMoveRobot(0,GO_BACK,0);
+            emit sigMoveRobot(ROTATELEFT_MIN,GO_STRAIGHT,0);
             sensorDataCaptured = RR;
             ////ldbg<< typeMovement <<endl;
         }
@@ -515,197 +521,216 @@ void ObstacleAvoidance::empiricObstacleHandler(double distanceRightR, double dis
 
 
 //DWA
-
 void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sonar,Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose *actualFrontier)
 {
 
     this->actualAction = actualAction;
     this->actualFrontier = actualFrontier;
     this->actualState = actualState;
-
+    this->actualPose = actualState->getPose();
 
     bool isLaserObstacle = false;
-    double leftSpeed = actualState->getLeftSpeed();
-    double rightSpeed = actualState->getRightSpeed();
 
     emit sigChangeActionStartTimestamp(-1);
 
-    if (leftSpeed != 0 && rightSpeed!=0)
+    isLaserObstacle = checkLaserData();
+
+    //ldbg <<"DWA: State is "<< statusEnumString[dwaBehaviorStatus]<< ". Laser obstaccle " << isLaserObstacle << ". Sonar obstacle " << isSonarObstacle << endl;
+
+    if (isLaserObstacle)
     {
-        if (isLaser)
+        if (dwaBehaviorStatus == DEACTIVATED)
         {
-            isLaser = false;
-            double min = LASER_THRESHOLD;
-            for (int i =0; i<180;i++)
-            {
-                if (actualLaser->getReadings()[i] < min)
-                {
-                    min = actualLaser->getReadings()[i];
-                    ldbg <<"DWA: Found obstacle at angle " << i << " with distance " << min << endl;
-                    isLaserObstacle = true;
-                }
-            }
+            emit sigStopRobot(true);
+            dwaBehaviorStatus = FIRSTTIME;
+            ldbg <<"DWA: DEACTIVATED to FIRSTIME (Inner)"<< endl;
         }
 
-        if (isFrontObstacle || isLaserObstacle)
+        if (dwaBehaviorStatus > DEACTIVATED)
         {
-            if (dwaBehaviorStatus == DEACTIVATED)
-            {
-                emit sigStopRobot(true);
-                dwaBehaviorStatus = FIRSTTIME;
-            }
+            emit sigUpdateSonarData(sonar);
+            Pose actualPose = actualState->getPose();
 
-            if (dwaBehaviorStatus == FIRSTTIME)
-            {
-                Pose actualPose = actualState->getPose();
-                localMap = getLocalMap(actualPose, actualLaser->getReadings());
+            laserReadings = actualLaser->getReadings();
 
-                emit sigUpdateSonarData(sonar);
+            calculateSearchSpace(actualPose);
 
-                QVector<QPair< double,double> > searchSpace = calculateSearchSpace(sonar);
+            int bestValue = calculateBestVelocity();
 
-                int bestValue = calculateBestVelocity(searchSpace);
-                if (bestValue == -1)
-                {
-                    ldbg <<"DWA: No position found." <<endl;
-                    dwaBehaviorStatus = EXEC;
-                    emit sigMoveRobot(0,VAI_INDIETRO,0);
+            bestLeftSpeed = searchSpaceVelocities[bestValue].first;
+            bestRightSpeed = searchSpaceVelocities[bestValue].second;
 
-                }
-                else
-                {
-                    Pose bestPose (localMap[bestValue].x, localMap[bestValue].y, 0);
 
-                    ldbg <<"DWA: Best pose is (" << bestPose.getX() << ", " << bestPose.getY() <<  ", " << bestPose.getTheta() << ") " << endl;
-                    double trasl = bestPose.getDistance(actualPose);
-                    double rot = fromRadiantToDegree(computeRotationFromPoses(actualPose,bestPose));
+            bestX = searchSpacePoses[bestValue].x;
+            bestY = searchSpacePoses[bestValue].y;
+            bestTheta = searchSpacePoses[bestValue].angle;
 
-                    ldbg <<"DWA: I must rotate of " << rot << endl;
-                    ldbg <<"DWA: I must traslate of " << trasl << endl;
+            bestPose = Pose(bestX, bestY, bestTheta);
 
-                    dwaBehaviorStatus = EXEC;
-                    emit sigMoveRobot(rot,trasl,0);
-                }
-                emit sigChangeRobotControlType(NORMAL);
-            }
+            ldbg << "DWA: Actual frontier is ("<< *actualFrontier<<
+                    "). Best pose is (" << bestPose
+                 <<"). Velocity is " << bestLeftSpeed << ", " << bestRightSpeed << endl;
+
+
+            dwaBehaviorStatus = EXEC;
+
+            emit sigDoMovement(bestLeftSpeed , bestRightSpeed);
+            //emit sigChangeRobotControlType(NORMAL);
         }
-        else
+    }
+    else
+    {
+        if (dwaBehaviorStatus> DEACTIVATED)
         {
-            if (actualAction == NULL)
+            double distance = actualPose.getDistance(bestPose);
+
+            ldbg <<"DWA: Actual pose is " << actualPose << endl;
+            ldbg <<"DWA: Best pose is "<<bestPose<<endl;
+            ldbg <<"DWA: Distance is " << distance <<endl;
+
+            if (distance<=DWA_DISTANCE||distance>0.1)
             {
-                if (dwaBehaviorStatus == EXEC)
-                    dwaBehaviorStatus = DEACTIVATED;
-                ldbg <<"DWA: Nothing to do. Restart exploration!" << endl;
+                dwaBehaviorStatus = DEACTIVATED;
+                ldbg <<"DWA: Restart exploration."<< endl;
                 emit sigRestartExploration();
             }
         }
     }
 }
 
-
-bool ObstacleAvoidance::isReachablePose(Pose predictedPose, Pose actualPose)
+bool ObstacleAvoidance::checkLaserData()
 {
-    Point* predictedPosePoint = new Point(predictedPose.getX(), predictedPose.getY());
-    Point* actualPosePoint = new Point(actualPose.getX(),actualPose.getY());
-
-    bool isReachable = slam->getMap(true).isReachable(*actualPosePoint,*predictedPosePoint,P3AT_RADIUS);
-
-    return isReachable;
-}
-
-
-QVector<QPair<double,double> > ObstacleAvoidance::calculateSearchSpace(const Data::SonarData &sonar)
-{
-
-    Pose actualPose = actualState->getPose();
-    QVector<QPair<double,double> > searchSpace = getLocalReachableSearchSpace();
-    return searchSpace;
-
-}
-
-QVector<ObstacleAvoidance::LocalMapEl> ObstacleAvoidance::getLocalMap(const Pose actualPose, QList<double> actualLaser)
-{
-    QVector<LocalMapEl> localMap (SEARCH_SPACE_GRANULARITY);
-    double actualX = actualPose.getX();
-    double actualY = actualPose.getY();
-
-    int i = 0;
-
-    //Search for all the direction (angle) the nearest pose that is reachable by the robot
-    for (double angle=0; angle<360; angle+=360/SEARCH_SPACE_GRANULARITY)
+    bool isLaserObstacle = false;
+    if (isLaser)
     {
-        //Values
-        float distance = actualLaser[angle];
-        localMap[i].angle = angle;
-        localMap[i].distance = distance;
-        localMap[i].x = actualX + distance*cos(angle);
-        localMap[i].y = actualY + distance*sin(angle);
-
-        ldbg << "DWA: Local map is " << angle << " " << distance << " (" << localMap[i].x  << ", " << localMap[i].y << ")"<<endl;
-        i++;
-    }
-    return localMap;
-}
-
-QVector<QPair<double, double> > ObstacleAvoidance::getLocalReachableSearchSpace()
-{
-    QVector<QPair<double,double> > searchSpace (SEARCH_SPACE_GRANULARITY);
-    for (int i=0; i<SEARCH_SPACE_GRANULARITY; i++)
-    {
-        if (localMap[i].distance == 0)
+        isLaser = false;
+        double min = LASER_THRESHOLD;
+        for (int i =0; i<actualLaser->getReadings().size();i++)
         {
-            searchSpace[i].first = 0;
-            searchSpace[i].second = 0;
-        }
-        else
-        {
-            double dXv = (localMap[i].x - actualState->getPose().getX())*cos(actualState->getPose().getTheta()) -
-                    (localMap[i].y - actualState->getPose().getY())*sin(actualState->getPose().getTheta());
-
-            double curvature = 2*dXv/localMap[i].distance;
-
-            double leftSpeed = (MAX_SPEED/RH_RADIUS)*(1 - (WHEEL_BASE/2)*curvature);
-            double rightSpeed = (MAX_SPEED/RH_RADIUS)*(1 + (WHEEL_BASE/2)*curvature);
-
-            ldbg << "DWA: Angle " << i*360/SEARCH_SPACE_GRANULARITY << " , pose to reach is (" << localMap[i].x << " , " << localMap[i].y << "), Velocity ("
-                 << leftSpeed << " , " << rightSpeed << ") "<< endl;
-
-            searchSpace[i].first = leftSpeed;
-            searchSpace[i].second = rightSpeed;
+            if (actualLaser->getReadings()[i] < min)
+            {
+                min = actualLaser->getReadings()[i];
+                ldbg <<"DWA: Found obstacle at angle " << i << " with distance " << min << endl;
+                isLaserObstacle = true;
+            }
         }
     }
-
-    return searchSpace;
+    return isLaserObstacle;
 }
 
-int ObstacleAvoidance::calculateBestVelocity(QVector<QPair< double,double> > searchSpace)
+int ObstacleAvoidance::getLaserID(double angle)
 {
-    double distance = 0;
+    int laserID = fromRadiantToDegree(angle);
+    if (laserID<0)
+        laserID = 360 - laserID;
+    if (laserID>360)
+        laserID = laserID - 360;
+
+    return laserID;
+}
+
+bool ObstacleAvoidance::checkSafePose(int laserID, LocalMapEl actualSample)
+{
+    for (int safeLaser = laserID - DWA_SAFETY; safeLaser<laserID + DWA_SAFETY; safeLaser++)
+    {
+        if (safeLaser<0)
+            safeLaser = 360 + safeLaser;
+
+        laserDistance = laserReadings.at(safeLaser);
+        actualDistance = actualSample.distance;
+
+        //ldbg<<"DWA: Actual distance = "<< actualDistance <<", Laser distance = "<< laserDistance;
+        if (actualDistance>laserDistance)
+            return false;
+    }
+
+    return true;
+}
+
+void ObstacleAvoidance::calculateSearchSpace(Pose actualPose)
+{
+    searchSpacePoses.clear();
+    searchSpaceVelocities.clear();
+
+    ldbg << "========= CALCULATE SEARCH SPACE =========" << endl;
+
+    for (double i=-DWA_MAX_VELOCITY; i<=DWA_MAX_VELOCITY; i+=DWA_STEP)
+    {
+        for (double j=-DWA_MAX_VELOCITY; j<=DWA_MAX_VELOCITY; j+=DWA_STEP)
+        {
+            LocalMapEl actualSample;
+
+            Pose predictedPose = forwardKinematics(actualPose,i,j,DWA_TIME);
+            actualSample.x = predictedPose.getX();
+            actualSample.y = predictedPose.getY();
+            actualSample.angle = predictedPose.getTheta();
+            actualSample.distance = predictedPose.getDistance(actualPose);
+
+            ldbg << "DWA: Actual sample is ("<<i <<", "<< j<<
+                "). Actual pose is "<< actualPose << ", predicted pose is "<< predictedPose<<endl;
+
+
+            int laserID = getLaserID(actualSample.angle);
+
+            safePose = checkSafePose(laserID, actualSample);
+
+            if (safePose)
+            {
+                ldbg<<"DWA: Safe pose. Append velocities "<< i << ", " << j <<endl;
+                QPair<double,double> velocity(i,j);
+                searchSpaceVelocities.append(velocity);
+                searchSpacePoses.append(actualSample);
+            }
+        }
+    }
+}
+
+int ObstacleAvoidance::calculateBestVelocity()
+{
+    double velocity= 0;
     double targetHeading = 0;
     double clearance = 0;
     int bestValue = 0;
-    double bestCost = 0;
+    double bestCost = 10;
 
-    for(int counter = 0; counter < SEARCH_SPACE_GRANULARITY;counter++)
+    ldbg << "========= CALCULATE BEST VELOCITY =========" << endl;
+
+    ldbg << "DWA: Search space size = " << searchSpaceVelocities.size() << ", Search poses size = " << searchSpacePoses.size() <<
+            ", Obstacle size = " << laserReadings.size() << endl;
+
+
+    for(int counter = 0; counter < searchSpaceVelocities.size(); counter++)
     {
-        if (searchSpace[counter].first == 0 && searchSpace[counter].second == 0)
-            continue;
+        Pose predictedPose (searchSpacePoses.at(counter).x, searchSpacePoses.at(counter).y, searchSpacePoses.at(counter).angle);
 
-        ldbg << "DWA: Actual Frontier is (" << actualFrontier->getX() << ", " << actualFrontier->getY() <<", " << actualFrontier->getTheta() << ") " << endl;
+        ldbg << "DWA: Actual Frontier is " <<*actualFrontier;
+        ldbg << ". Predicted pose is "<< predictedPose << endl;
 
-        Pose predictedPose (localMap[counter].x, localMap[counter].y, localMap[counter].angle);
+        int laserID = getLaserID(predictedPose.getTheta());
 
-        ldbg << "DWA: Predicted pose is (" << predictedPose.getX() << ", " << predictedPose.getY() <<"," << predictedPose.getTheta() << ") " << endl;
+        //ldbg << "DWA: Actual laser is " <<laserID <<endl;
 
-        distance = predictedPose.getDistance(*actualFrontier);
-        targetHeading = angularDistance(actualFrontier->getTheta(),predictedPose.getTheta());
-        clearance = searchSpace[counter].first;
+        double obstacleDistance = laserReadings.at(laserID);
+        double predictedPoseDistance = searchSpacePoses.at(counter).distance;
 
-        ldbg << "Parameters: Target Heading= "<< targetHeading << " Distance= " << distance << " Clearance= " << clearance<<endl;
+        if (obstacleDistance<predictedPoseDistance)
+            ldbg << "DWA: Error 1(Predicted pose not reachable)"<<endl;
 
-        double cost = distance + clearance - targetHeading;
+        clearance = obstacleDistance - predictedPoseDistance;
+        targetHeading = computeRotationFromPoses(predictedPose,*actualFrontier);
+        velocity = (searchSpaceVelocities.at(counter).first + searchSpaceVelocities.at(counter).second)/2;
+
+        ldbg << "Parameters: Counter = "<< counter << " Target = " << targetHeading << ", Clearance = " << clearance << ", Velocity = " << velocity << endl;
+
+        double t = (360 - abs(targetHeading))/360;
+        double c = clearance/obstacleDistance;
+        double v = abs(velocity);
+
+        ldbg << "Parameters(Normalized) Counter = "<< counter << " Target = " << DWA_TARGET*t << ", Clearance = " << DWA_CLEARANCE*c << ", Velocity = " << DWA_VELOCITY*v << endl;
+
+        double cost = DWA_SIGMA*(DWA_TARGET*t + DWA_CLEARANCE*c + DWA_VELOCITY*v);
         ldbg << "Cost = " << cost << endl;
-        if (cost>=bestCost)
+        if (cost<=bestCost)
         {
             ldbg << "DWA: Is best cost!"<<endl;
             bestCost = cost;
@@ -713,7 +738,8 @@ int ObstacleAvoidance::calculateBestVelocity(QVector<QPair< double,double> > sea
         }
     }
 
-
+    ldbg << "Parameters: Target Heading = "<< fromRadiantToDegree(targetHeading) << ", Clearance = " << clearance << ", Velocity= " << velocity<<endl;
+    ldbg << "Cost = "<<bestCost <<endl;
 
     return bestValue;
 }
@@ -727,7 +753,7 @@ void ObstacleAvoidance::handleNeuralSonarData(const Data::SonarData &sonar,Data:
 
     emit sigChangeActionStartTimestamp(-1);
 
-    if (isFrontObstacle || isBackObstacle)
+    if (isSonarObstacle || isBackObstacle)
     {
         ldbg << "FANN: Neural Behavior Status is "<< statusEnumString[neuralBehaviorStatus]<<endl;
         ldbg << "FANN: Minimum frontal distance is " << sonar.getMinDistance() << endl;
@@ -787,91 +813,91 @@ void ObstacleAvoidance::applyPredictedAction(int predictedMovement)
     case LLLFRRR:
     {
         ldbg <<"FANN: Go back and rotate to right (max)." << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
+        emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MAX);
         break;
     }
     case LLLFR:
     {
         ldbg <<"FANN: Go back and rotate to right (max)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MAX);
+        emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MAX);
         break;
     }
     case LLLF:
     {
         ldbg <<"FANN: Go back and rotate to right (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MED);
         break;
     }
     case LLL:
     {
         ldbg <<"FANN: Go back and rotate to right (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MED);
         break;
     }
     case LL:
     {
         ldbg <<"FANN: Go back and rotate to right (min)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MIN);
+        emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MIN);
         break;
     }
     case LFRRR:
     {
         ldbg <<"FANN: Go back and rotate to left (max)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MAX);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MAX);
         break;
     }
     case LFR:
     {
         ldbg <<"FANN: Go back and rotate to left (max)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MAX);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MAX);
         break;
     }
     case LF:
     {
         ldbg <<"FANN: Go back and rotate to left (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MED);
         break;
     }
     case L:
     {
         ldbg <<"FANN: Go back and rotate to right (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTADESTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATERIGHT_MED);
         break;
     }
     case FRRR:
     {
         ldbg <<"FANN: Go back and rotate to left (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MED);
         break;
     }
     case FR:
     {
         ldbg <<"FANN: Go back and rotate to left (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MED);
         break;
     }
     case F:
     {
         ldbg <<"FANN: Go back and rotate to left (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MED);
         break;
     }
     case RRR:
     {
         ldbg <<"FANN: Go back and rotate to left (max)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MAX);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MAX);
         break;
     }
     case RR:
     {
         ldbg <<"FANN: Go back and rotate to left (min)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MIN);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MIN);
         break;
     }
     case R:
     {
         ldbg <<"FANN: Go back and rotate to left (med)" << endl;
-        emit sigMoveRobot(0,VAI_INDIETRO,RUOTASINISTRA_MED);
+        emit sigMoveRobot(0,GO_BACK,ROTATELEFT_MED);
         break;
     }
     default:
@@ -880,7 +906,7 @@ void ObstacleAvoidance::applyPredictedAction(int predictedMovement)
         break;
     }
     }
-    emit sigMoveRobot(0,VAI_AVANTI,0);
+    emit sigMoveRobot(0,GO_STRAIGHT,0);
 }
 
 void ObstacleAvoidance::setLaser(Data::LaserData &laser)

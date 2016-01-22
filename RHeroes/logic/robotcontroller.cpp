@@ -67,7 +67,7 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
 
     inverseKinematicModule = new InverseKinematicCF(WHEEL_BASE,aisKenaf);
 
-    obstacleAvoidance = new ObstacleAvoidance(inverseKinematicModule);
+    obstacleAvoidance = new ObstacleAvoidance(inverseKinematicModule, ANGLE_TOL);
 
     if (aisKenaf)
         robotType = KENAF;
@@ -87,6 +87,7 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     connect(obstacleAvoidance, SIGNAL(sigRestartExploration()), this, SLOT(onRestartExploration()),Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigStopRobot(bool)), this, SLOT(stopRobot(bool)),Qt::DirectConnection);
     connect(this, SIGNAL(sigChangeMovementType(int)), obstacleAvoidance, SLOT(setMovementType(int)),Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigDoMovement(double,double)), this, SLOT(doMovement(double,double)), Qt::DirectConnection);
 
     teleOperationTimer->setSingleShot(true);
 
@@ -744,7 +745,7 @@ void RobotController::controlRotationRobotStall()
 
 void RobotController::controlRotationSetPointReached()
 {
-    //ldbg << "Robot Controller - Control Rotation: set point reached!" << endl;
+    ldbg << "Robot Controller - Control Rotation: set point reached!" << endl;
 
     doMovement(0,0);
     emit sigChangeMovementType(S);
@@ -774,14 +775,14 @@ void RobotController::controlRotationNegPos()
         double leftSpeed = actualState->getLeftSpeed();
         double rightSpeed = actualState->getRightSpeed();
 
-        if(((fabs(leftSpeed))>MED_SPEED))
+        if(((fabs(leftSpeed))>LOW_SPEED))
             leftSpeed = leftSpeed*SPEED_DECR_FACTOR;
         else
-            leftSpeed = -MED_SPEED;
-        if(fabs(rightSpeed)>MED_SPEED)
+            leftSpeed = -LOW_SPEED;
+        if(fabs(rightSpeed)>LOW_SPEED)
             rightSpeed = rightSpeed*SPEED_DECR_FACTOR;
         else
-            rightSpeed = MED_SPEED;
+            rightSpeed = LOW_SPEED;
 
         doMovement(-leftSpeed, -rightSpeed);
         ldbg << "Robot Controller - controlRotation: speed inverted (counter-clockwise)" << endl;
@@ -799,7 +800,7 @@ void RobotController::controlRotationPosPos(double distance)
         countSpeedChange++;
     }
 
-    if(distance < fromDegreeToRadiants(LOW_SPEED_LIMIT_ANGLE) || slowMotion){
+    if(distance < fromDegreeToRadiants(SPEED_LIMIT_ANGLE) || slowMotion){
         doMovement(-LOW_SPEED, LOW_SPEED);
     } else {
         doMovement(-MED_SPEED, MED_SPEED);
@@ -816,14 +817,14 @@ void RobotController::controlRotationPosNeg()
         double leftSpeed=actualState->getLeftSpeed();
         double rightSpeed=actualState->getRightSpeed();
 
-        if(((fabs(leftSpeed))>MED_SPEED))
+        if(((fabs(leftSpeed))>LOW_SPEED))
             leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
         else
-            leftSpeed=MED_SPEED;
-        if(fabs(rightSpeed)>MED_SPEED)
+            leftSpeed=LOW_SPEED;
+        if(fabs(rightSpeed)>LOW_SPEED)
             rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
         else
-            rightSpeed=-MED_SPEED;
+            rightSpeed=-LOW_SPEED;
 
         doMovement(-leftSpeed, -rightSpeed);
         ldbg << "Robot Controller - controlRotation: speed inverted (clockwise)" << endl;
@@ -839,7 +840,7 @@ void RobotController::controlRotationNegNeg(double distance)
         isSpeedChanged = true;
         countSpeedChange++;
     }
-    if(fabs(distance) < fromDegreeToRadiants(LOW_SPEED_LIMIT_ANGLE) || slowMotion)
+    if(fabs(distance) < fromDegreeToRadiants(SPEED_LIMIT_ANGLE) || slowMotion)
         doMovement(LOW_SPEED, -LOW_SPEED);
     else
         doMovement(MED_SPEED, -MED_SPEED);
@@ -860,6 +861,8 @@ void RobotController::controlRotation(const Action &rotation) {
         ldbg << "Robot Controller - controlRotation: Real angle to reach = "<< fromRadiantToDegree(angleToReach) << endl;
 
         angleToReach = wrapRad(angleToReach);
+
+        ldbg << "Robot Controller - controlRotation: Wrapped angle to reach = "<< fromRadiantToDegree(angleToReach) << endl;
 
         double performedAngle =  actualState->getPose().getTheta();
         double distance = fromRadiantToDegree(angularDistance(performedAngle, angleToReach));
@@ -893,10 +896,9 @@ void RobotController::controlTraslationNewAction(const Action &traslation)
 {
     constantPoseCounter = 0;
 
-    //ldbg << "Robot Controller - controlTranslation: Inizio traslazione. Todo vale " << todo.getValue() << endl;
     if(traslation.getValue()>0)
     {
-        //ldbg << "Robot Controller - controlTranslation: Devo andare avanti di: "<< todo.getValue()<<endl;
+        ldbg << "Robot Controller - controlTranslation: Go straight of: "<< traslation.getValue()<<endl;
         if(traslation.getValue() <= LOW_SPEED_LIMIT_TRASL)
             doMovement(MED_SPEED, MED_SPEED);
         else
@@ -904,7 +906,7 @@ void RobotController::controlTraslationNewAction(const Action &traslation)
     }
     else
     {
-        //ldbg << "Robot Controller - controlTranslation: Devo andare indietro di: "<< todo.getValue()<<endl;
+        ldbg << "Robot Controller - controlTranslation: Go back of: "<< traslation.getValue()<<endl;
         if(traslation.getValue() >= -LOW_SPEED_LIMIT_TRASL)
             doMovement(-MED_SPEED, -MED_SPEED);
         else
@@ -1098,7 +1100,7 @@ void RobotController::onNoFrontierAvailableRCM()
 {
     emit sigCleanBadFrontierRCM();
     controlRobotType = NORMAL;;
-    moveRobot(0,VAI_AVANTI,0);
+    moveRobot(0,GO_STRAIGHT,0);
 }
 
 void RobotController::sendSonarMessage()
