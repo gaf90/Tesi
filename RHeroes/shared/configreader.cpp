@@ -2,16 +2,18 @@
 #include "config.h"
 #include <QTextStream>
 #include <QStringList>
+#include <QDebug>
 
 #define SET_VARIABLE(name)                                                  \
     do {                                                                    \
-        if(varName.compare(nameFormat(#name), Qt::CaseInsensitive) == 0) {  \
-            convertTo(varValue, Config::name);                              \
-        }                                                                   \
+    if(varName.compare(nameFormat(#name), Qt::CaseInsensitive) == 0) {     \
+    convertTo(varValue, Config::name);                              \
+    }                                                                   \
     } while(0)
 
 #define SET_SLAM_VARIABLE(name) SET_VARIABLE(SLAM::name)
 #define SET_PRM_VARIABLE(name) SET_VARIABLE(PRM::name)
+#define SET_OBS_VARIABLE(name) SET_VARIABLE(OBS::name)
 
 namespace Config{
 ConfigReader::ConfigReader(const QString &filePath, QObject *parent) :
@@ -31,7 +33,7 @@ int ConfigReader::readFileAndCompileConfigs()
     QFile file(filePath);
     bool opened = file.open(QIODevice::ReadOnly | QIODevice::Text);
     if(!opened){
-        //file not opened
+        qDebug()<<"CONFIG: File not found";
         return -1;
     }
 
@@ -47,7 +49,6 @@ int ConfigReader::readFileAndCompileConfigs()
                 setVariable(varName, varValue);
             }
         } else {
-            // Mannaggia, there's an error in the file syntax
             return -2;
         }
     }
@@ -62,7 +63,9 @@ void ConfigReader::setVariable(const QString &varName, const QString &varValue)
         setSLAMVariable(varName, varValue);
     }else if(varName.startsWith("prm/", Qt::CaseInsensitive)) {
         setPRMVariable(varName, varValue);
-    } else if(varValue.at(0) == '"' && varValue.at(varValue.size() - 1) == '"') {
+    }else if(varName.startsWith("obs/", Qt::CaseInsensitive)) {
+        setOBSVariable(varName, varValue);
+    }else if(varValue.at(0) == '"' && varValue.at(varValue.size() - 1) == '"') {
         setVariableString(varName, varValue.mid(1, varValue.length() - 2));
     } else if(regexp.exactMatch(varValue)) {
         setVariableNumber(varName, varValue.toDouble());
@@ -170,6 +173,29 @@ void ConfigReader::setPRMVariable(const QString &varName, const QString &varValu
     SET_PRM_VARIABLE(pathNumber);
 }
 
+void ConfigReader::setOBSVariable(const QString &varName, const QString &varValue)
+{
+    SET_OBS_VARIABLE(obstacle_algorithm);
+    SET_OBS_VARIABLE(emp_angle_tolerance);
+    SET_OBS_VARIABLE(emp_sonar_threshold);
+    SET_OBS_VARIABLE(emp_straight_meters);
+    SET_OBS_VARIABLE(emp_back_meters);
+
+    SET_OBS_VARIABLE(dwa_laser_threshold);
+    SET_OBS_VARIABLE(dwa_laser_max_range);
+    SET_OBS_VARIABLE(dwa_time);
+    SET_OBS_VARIABLE(dwa_min_velocity);
+    SET_OBS_VARIABLE(dwa_max_velocity);
+    SET_OBS_VARIABLE(dwa_step);
+    SET_OBS_VARIABLE(dwa_safety);
+    SET_OBS_VARIABLE(dwa_pose_threshold);
+
+    SET_OBS_VARIABLE(dwa_sigma);
+    SET_OBS_VARIABLE(dwa_alpha_target);
+    SET_OBS_VARIABLE(dwa_beta_clearance);
+    SET_OBS_VARIABLE(dwa_gamma_velocity);
+}
+
 
 QString ConfigReader::nameFormat(const QString &name) const
 {
@@ -178,7 +204,7 @@ QString ConfigReader::nameFormat(const QString &name) const
     QChar previous = 'A';
 
     for(QString::const_iterator it = varName.begin(), end = varName.end();
-            it != end; ++it, size++) {
+        it != end; ++it, size++) {
         if(it->isUpper()) {
             fieldName.append(varName.mid(start, size));
             if(previous.isLower()) {

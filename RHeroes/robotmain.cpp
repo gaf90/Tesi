@@ -124,7 +124,6 @@ int main(int argc, char *argv[])
     // Load Configuration
     Config::ConfigReader reader(conf.configFile);
     reader.readFileAndCompileConfigs();
-
     conf = parseArgs(a.arguments());
 
     // Override configuration with command line arguments
@@ -150,6 +149,9 @@ int main(int argc, char *argv[])
 
     int mapping2 = logger.addFileOutput(QString(PREFIX "poaretFastSlam_%1.log").arg(conf.id), false);
     logger.setFilenameFilter(QRegExp(".*fastslam2\\.cpp"), mapping2);
+
+    int config = logger.addFileOutput(QString(PREFIX "poaretConfig_%1.log").arg(conf.id), false);
+    logger.setFilenameFilter(QRegExp(".*(configreader).*"),config);
 
     logger.addFileOutput(QString(PREFIX "poaret_all_%1.log").arg(conf.id), false);
 

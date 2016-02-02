@@ -42,6 +42,7 @@ private:
     void setVariableNumber(const QString &varName, double value);
     void setSLAMVariable(const QString &varName, const QString &varValue);
     void setPRMVariable(const QString &varName, const QString &varValue);
+    void setOBSVariable(const QString &varName, const QString &varValue);
 
     void convertTo(const QString &strValue, int &value) const;
     void convertTo(const QString &strValue, double &value) const;

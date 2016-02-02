@@ -100,6 +100,35 @@ extern int pointNumberFrontier;
 extern int maxPointDistance;
 extern int pathNumber;
 }
+
+//Obstacle
+namespace OBS{
+
+extern int obstacle_algorithm;
+
+extern int emp_angle_tolerance;
+extern double emp_sonar_threshold;
+extern double emp_straight_meters;
+extern double emp_back_meters;
+
+extern double dwa_laser_threshold;
+extern double dwa_laser_max_range;
+extern double dwa_time;
+extern double dwa_min_velocity;
+extern double dwa_max_velocity;
+extern double dwa_step;
+extern double dwa_safety;
+extern double dwa_pose_threshold;
+
+extern double dwa_sigma;
+extern double dwa_alpha_target;
+extern double dwa_beta_clearance;
+extern double dwa_gamma_velocity;
+
+}
+
+
+
 //
 }
 

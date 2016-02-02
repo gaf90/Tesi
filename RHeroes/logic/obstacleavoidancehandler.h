@@ -15,34 +15,18 @@
 #include <slam/slammodule.h>
 #include <libraries/fann/doublefann.h>
 
-#define THRESHOLD 0.22
-#define LASER_THRESHOLD 0.5
-#define LASER_MAX_RANGE 10
-#define DWA_TIME 1
-#define DWA_MAX_VELOCITY 0.5
-#define DWA_STEP 0.2
-#define DWA_SAFETY 5
-#define DWA_DISTANCE 0.05
+#define EMP_SONAR_THRESHOLD Config::OBS::emp_sonar_threshold
+#define EMP_ANGLE_TOL Config::OBS::emp_angle_tolerance
+#define EMP_GO_STRAIGHT Config::OBS::emp_straight_meters
+#define EMP_GO_BACK Config::OBS::emp_back_meters
 
-#define DWA_SIGMA 1
-#define DWA_TARGET 1
-#define DWA_CLEARANCE 0.5
-#define DWA_VELOCITY 0.5
+#define EMP_ROTATELEFT_MIN 5 + EMP_ANGLE_TOL
+#define EMP_ROTATELEFT_MED 10 + EMP_ANGLE_TOL
+#define EMP_ROTATELEFT_MAX 20 + EMP_ANGLE_TOL
+#define EMP_ROTATERIGHT_MIN -5 - EMP_ANGLE_TOL
+#define EMP_ROTATERIGHT_MED -10 - EMP_ANGLE_TOL
+#define EMP_ROTATERIGHT_MAX -20 - EMP_ANGLE_TOL
 
-
-#define ANGLE_TOL 15
-#define ROTATELEFT_MIN 5 + ANGLE_TOL
-#define ROTATELEFT_MED 10 + ANGLE_TOL
-#define ROTATELEFT_MAX 20 + ANGLE_TOL
-#define ROTATERIGHT_MIN -5 - ANGLE_TOL
-#define ROTATERIGHT_MED -10 - ANGLE_TOL
-#define ROTATERIGHT_MAX -20 - ANGLE_TOL
-#define GO_STRAIGHT 1
-#define GO_BACK -0.3
-
-#define RADIUS_LOCAL 3
-#define SEARCH_SPACE_GRANULARITY 36
-#define RH_RADIUS 0.63
 
 
 class ObstacleAvoidance : public QObject

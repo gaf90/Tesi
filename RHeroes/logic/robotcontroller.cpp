@@ -67,7 +67,7 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
 
     inverseKinematicModule = new InverseKinematicCF(WHEEL_BASE,aisKenaf);
 
-    obstacleAvoidance = new ObstacleAvoidance(inverseKinematicModule, ANGLE_TOL);
+    obstacleAvoidance = new ObstacleAvoidance(inverseKinematicModule, EMP_ANGLE_TOL);
 
     if (aisKenaf)
         robotType = KENAF;
@@ -310,7 +310,7 @@ void RobotController::checkAround(const Data::Pose &pose)
 
     ////ldbg <<"Robot Controller: Robot pose is distance from new pose of " << distance << " meters and of "<< angDist <<" radiant"<< endl;
 
-    if(distance <= TRASL_TOL && angDist <= ANGLE_TOL && !actualState->isIdle()){
+    if(distance <= TRASL_TOL && angDist <= EMP_ANGLE_TOL && !actualState->isIdle()){
         counterAround++;
         if(counterAround > 3*STALL_LIMIT)
         {
@@ -869,7 +869,7 @@ void RobotController::controlRotation(const Action &rotation) {
 
         ldbg << "Robot Controller - controlRotation: Angular distance = "<< distance <<endl;
 
-        if((fabs(distance) <= ANGLE_TOL && !isJustChanged) || constantPoseCounter >= STALL_LIMIT || countSpeedChange > STALL_LIMIT)
+        if((fabs(distance) <= EMP_ANGLE_TOL && !isJustChanged) || constantPoseCounter >= STALL_LIMIT || countSpeedChange > STALL_LIMIT)
         {
             if(constantPoseCounter>=STALL_LIMIT || countSpeedChange > STALL_LIMIT)
             {
@@ -1100,7 +1100,7 @@ void RobotController::onNoFrontierAvailableRCM()
 {
     emit sigCleanBadFrontierRCM();
     controlRobotType = NORMAL;;
-    moveRobot(0,GO_STRAIGHT,0);
+    moveRobot(0,EMP_GO_STRAIGHT,0);
 }
 
 void RobotController::sendSonarMessage()

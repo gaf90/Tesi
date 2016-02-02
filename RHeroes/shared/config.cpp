@@ -86,5 +86,29 @@ int pointNumberFrontier = 5;
 int maxPointDistance = 20;
 int pathNumber = 3;
 }
-//
+//Obstacle
+namespace OBS{
+
+int obstacle_algorithm = 0;
+
+int emp_angle_tolerance = 15;
+double emp_straight_meters = 1;
+double emp_back_meters = -0.3;
+double emp_sonar_threshold = 0.22;
+double dwa_laser_threshold = 0.5;
+double dwa_laser_max_range = 10;
+
+double dwa_time = 1;
+double dwa_min_velocity = 0;
+double dwa_max_velocity = 0.7;
+double dwa_step = 0.5;
+double dwa_safety = 20;
+double dwa_pose_threshold = 0.1;
+double dwa_sigma = 1;
+double dwa_alpha_target = 0.5;
+double dwa_beta_clearance = 1;
+double dwa_gamma_velocity =0.2;
+
+}
+
 }
