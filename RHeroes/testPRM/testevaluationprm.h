@@ -20,7 +20,6 @@ public slots:
 private slots:
     void testEval();
     void testEval2();
-    void testEval3();
 };
 
 }

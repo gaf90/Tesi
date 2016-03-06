@@ -176,18 +176,39 @@ void ConfigReader::setPRMVariable(const QString &varName, const QString &varValu
 void ConfigReader::setOBSVariable(const QString &varName, const QString &varValue)
 {
     SET_OBS_VARIABLE(obstacle_algorithm);
+
+    SET_OBS_VARIABLE(is_test);
+
+    SET_OBS_VARIABLE(test_pose_x);
+    SET_OBS_VARIABLE(test_pose_y);
+    SET_OBS_VARIABLE(test_pose_z);
+    SET_OBS_VARIABLE(test_pose_theta);
+
+    SET_OBS_VARIABLE(test_frontier_x);
+    SET_OBS_VARIABLE(test_frontier_y);
+    SET_OBS_VARIABLE(test_frontier_z);
+    SET_OBS_VARIABLE(test_frontier_theta);
+
+    SET_OBS_VARIABLE(sonar_threshold);
+    SET_OBS_VARIABLE(laser_threshold);
+    SET_OBS_VARIABLE(obstacle_timeout);
+
     SET_OBS_VARIABLE(emp_angle_tolerance);
-    SET_OBS_VARIABLE(emp_sonar_threshold);
+    SET_OBS_VARIABLE(emp_min_rotation);
+    SET_OBS_VARIABLE(emp_med_rotation);
+    SET_OBS_VARIABLE(emp_max_rotation);
     SET_OBS_VARIABLE(emp_straight_meters);
     SET_OBS_VARIABLE(emp_back_meters);
 
-    SET_OBS_VARIABLE(dwa_laser_threshold);
-    SET_OBS_VARIABLE(dwa_laser_max_range);
+    SET_OBS_VARIABLE(emp_frontier_angle_threshold);
+    SET_OBS_VARIABLE(emp_left_right_threshold);
+
     SET_OBS_VARIABLE(dwa_time);
     SET_OBS_VARIABLE(dwa_min_velocity);
     SET_OBS_VARIABLE(dwa_max_velocity);
     SET_OBS_VARIABLE(dwa_step);
-    SET_OBS_VARIABLE(dwa_safety);
+    SET_OBS_VARIABLE(dwa_translation_safety);
+    SET_OBS_VARIABLE(dwa_rotation_safety);
     SET_OBS_VARIABLE(dwa_pose_threshold);
 
     SET_OBS_VARIABLE(dwa_sigma);

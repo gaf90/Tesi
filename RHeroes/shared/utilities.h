@@ -80,7 +80,7 @@ static inline void exchange(T &a, T &b) {
  */
 static inline double wrapDeg(double angle) {
 
-    while(angle < - FULL_ROUND_DEG) angle += FULL_ROUND_DEG;
+    while(angle < -FULL_ROUND_DEG) angle += FULL_ROUND_DEG;
     while(angle > FULL_ROUND_DEG) angle -= FULL_ROUND_DEG;
     return angle;
 }

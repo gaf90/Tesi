@@ -5,7 +5,7 @@
 /**
   * Time interval between two map requests
   */
-#define MAP_RENEW_TIME 3*1000
+#define MAP_RENEW_TIME 10000
 
 #define NEW_FRONT_RADIUS 0.5
 

@@ -158,7 +158,7 @@ void ExplorationModule::setSLAMModule(SLAM::SLAMModule *slamModule)
         connect(plannerPRM,SIGNAL(sigPerformActionPP(PathPlanner::AbstractAction*)),this, SLOT(onPerformActionEM(PathPlanner::AbstractAction*)), Qt::DirectConnection);
         connect(plannerPRM,SIGNAL(sigRestartExplorationPP()),this, SLOT(onRestartExplorationEM()));
         connect(plannerPRM,SIGNAL(sigFrontierToReachPP(Data::Pose)),this, SLOT(onFrontierToReachEM(Data::Pose)));
-        ldbg << "MCDM policy"<<endl;
+        ldbg << "Exploration Module: MCDM policy"<<endl;
     }
 }
 
@@ -174,6 +174,7 @@ void ExplorationModule::onRestartExplorationEM(){
 
 void ExplorationModule::onFrontierToReachEM(Data::Pose pose)
 {
+    ldbg <<"Exploration: Frontier to reach is " << pose << endl;
     emit sigFrontierToReachEM(pose);
 
     DestinationMessage *destinationMessage = new DestinationMessage(robotId, pose.position());
@@ -213,7 +214,7 @@ void ExplorationModule::changeStatus(bool activate)
         emit sigStartTimerEM();
     else
         emit sigStopTimerEM();
-    ldbg << "Exploration: State changed. Active? " << activate << endl;
+    //ldbg << "Exploration: State changed. Active? " << activate << endl;
     stateMutex->unlock();
 }
 
@@ -236,9 +237,28 @@ void ExplorationModule::onTimeout()
 
     Map newMap = slamModule->getMap();
 
+    foreach(Frontier *fn, newMap.frontiers() )
+    {
+        Point newCentroid = fn->centroid();
+        ldbg <<"Exploration: Centroid " << newCentroid << endl;
+    }
+
     ldbg << "Exploration Module: Search new frontiers." << endl;
 
-    newFrontiersFound = searchNewFrontiers(newMap);
+    if (Config::OBS::is_test == 0)
+        newFrontiersFound = searchNewFrontiers(newMap);
+    else
+    {
+        newMap.frontiers().clear();
+
+        ldbg << "Test_frontier = "<<Config::OBS::test_frontier_x<<", "<<Config::OBS::test_frontier_y<<endl;
+
+        Frontier test_frontier(Config::OBS::test_frontier_x - 0.5, Config::OBS::test_frontier_y -0.5,
+                               Config::OBS::test_frontier_x + 0.5, Config::OBS::test_frontier_y +0.5);
+        newMap.addFrontier(test_frontier);
+        newFrontiersFound = true;
+    }
+
     map = newMap;
     updateSignalStrengths();
 }
@@ -253,7 +273,7 @@ double ExplorationModule::evaluateFrontier(const Frontier *frontier)
     QHash<uint, double> *signalPowerData = robotState->getSignalPowerData();
     evaluation = evalFunction->evaluateFrontier(frontier, map, robotState->getBattery(), *signalPowerData);
 
-    ldbg << "Exploration Module: Fronier value is " << evaluation << endl;
+    ldbg << "Exploration Module: Frontier value is " << evaluation << endl;
 
     signalPowerData->clear();
     delete signalPowerData;
@@ -288,6 +308,9 @@ bool ExplorationModule::searchNewFrontiers(const SLAM::Map &map)
             {
                 Point oldCentroid = fo->centroid();
                 Point newCentroid = fn->centroid();
+
+                ldbg <<"Exploration: Centroid " << newCentroid << endl;
+
                 if(oldCentroid.distance(newCentroid)>NEW_FRONT_RADIUS){
                     matchFound = true;
                     break;

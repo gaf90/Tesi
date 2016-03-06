@@ -84,10 +84,12 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     connect(obstacleAvoidance, SIGNAL(sigUpdateSonarData(Data::SonarData)), this, SLOT(setLastSonarData(Data::SonarData)), Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigMoveRobot(double,double,double)), this, SLOT(moveRobot(double,double,double)), Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigChangeRobotControlType(int)), this, SLOT(setControlType(int)),Qt::DirectConnection);
-    connect(obstacleAvoidance, SIGNAL(sigRestartExploration()), this, SLOT(onRestartExploration()),Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigRecomputePath(Data::Pose)), this, SLOT(onRecomputePath(Data::Pose)),Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigStopRobot(bool)), this, SLOT(stopRobot(bool)),Qt::DirectConnection);
     connect(this, SIGNAL(sigChangeMovementType(int)), obstacleAvoidance, SLOT(setMovementType(int)),Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigDoMovement(double,double)), this, SLOT(doMovement(double,double)), Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigHandleTimer()), this, SLOT(onObstacleStart()), Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigFrontierReached()), this, SLOT(onFrontierReached()), Qt::DirectConnection);
 
     teleOperationTimer->setSingleShot(true);
 
@@ -100,14 +102,22 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     double y = loc[1].toDouble();
     double t = rot[0].toDouble();
 
-    oldFrontier = new Pose(x,y,t);
-    actualFrontier = new Pose(x,y,t);
+    if (Config::OBS::is_test == 1)
+    {
+        actualFrontier = new Pose(Config::OBS::test_frontier_y, Config::OBS::test_frontier_x, -Config::OBS::test_frontier_theta);
+        oldFrontier = new Pose(actualFrontier->getX(), actualFrontier->getY(), actualFrontier->getTheta());
+        actualState->setPose(Pose(Config::OBS::test_pose_y, Config::OBS::test_pose_x, Config::OBS::test_pose_theta));
+    }
+    else
+    {
+        oldFrontier = new Pose(y,x,-t);
+        actualFrontier = new Pose(y,x,-t);
+        actualState->setPose(Pose(y,x,-t));
+    }
 
-    actualState->setPose(Pose(x, y, t));
+
     pastState = new RobotState(*actualState);
 
-    obstacleAvoidanceTimer->setSingleShot(true);
-    randomActionTimer->setSingleShot(true);
 }
 
 //======= DESTRUCTORS =======//
@@ -151,9 +161,11 @@ void RobotController::onTimeoutTeleoperation()
 
         randomActionTimer->stop();
         obstacleAvoidanceTimer->stop();
+        ldbg << "Robot controller: Restart exploration after teleoperation timeout"<<endl;
         onRestartExploration();
     }
 }
+
 
 //======= SENSORS HANDLING =======//
 
@@ -179,7 +191,7 @@ void RobotController::onSensorData(const Message &data)
         if (!normalActionQueue->isEmpty())
             actualAction = normalActionQueue->head();
 
-        obstacleAvoidance->handleObstacle(sonar, actualState,actualAction,actualFrontier);
+        obstacleAvoidance->handleObstacle(sonar, pastState,actualState,actualAction,actualFrontier);
     }
 
     else if(typeid(data) == typeid(const LaserData &) )
@@ -242,9 +254,9 @@ void RobotController::handleWheelMotionMessage(const BuddyMessage *buddy)
             }
             //ldbg << "handleWirelessData. restart timers"<<endl;
             crono.start();
-            teleOperationTimer->start(TELEOPERATION_TIMEOUT_MSEC);
+            teleOperationTimer->start(TIMEOUT_MSEC);
         }
-        emit sigChangeStatetExplorationRCM(false);
+        emit sigChangeStateExplorationRCM(false);
         emit sigChangeStatePathPlanningRCM(false);
         emit sigCleanBadFrontierRCM();
 
@@ -373,7 +385,7 @@ void RobotController::insertActionToPerform(Action::ActionType type, double valu
 void RobotController::onPerformActionRCM(PathPlanner::AbstractAction *action)
 {
     sonarStatus = ON;
-    if (obstacleAvoidance->empiricFrontStatus >0 && obstacleAvoidance->neuralBehaviorStatus>0 && obstacleAvoidance->dwaBehaviorStatus>0 && normalActionQueue->size()!=0)
+    if (obstacleAvoidance->empiricBehaviorStatus >0 && obstacleAvoidance->neuralBehaviorStatus>0 && obstacleAvoidance->dwaBehaviorStatus>0 && normalActionQueue->size()!=0)
     {
         ldbg << "Robot Controller: Ignore perform action" << endl;
         return;
@@ -442,7 +454,7 @@ void RobotController::onStopRobotForPlanning()
 {
     //ldbg << "Robot Controller: Path planner stops the robot. Restart Exploration" << endl;
     stopRobot(true);
-    emit sigChangeStatetExplorationRCM(false);
+    emit sigChangeStateExplorationRCM(false);
 }
 
 
@@ -465,8 +477,6 @@ void RobotController::stopRobot(bool saveState)
     ldbg << "RobotController: stop robot."<<endl;
 
     doMovement(0,0);
-    emit sigChangeMovementType(S);
-
     if(saveState){
         saveRobotState();
     }
@@ -526,7 +536,7 @@ void RobotController::odometryClosedLoop(double angle1, double translation, doub
     }
 }
 
-bool RobotController::poseReached(const Pose &pose) const
+bool RobotController::poseReached(const Pose &pose)
 {
     const Pose current = actualState->getPose();
     const Point toReach(pose.x(), pose.y());
@@ -577,9 +587,9 @@ void RobotController::onStateUpdated()
         {
             newAction = FALSE;
             stopRobot(false);
-            emit sigChangeStatetExplorationRCM(true);
+            emit sigChangeStateExplorationRCM(true);
         }
-        if (haveReceivedWaypoint && (obstacleAvoidance->empiricFrontStatus == 0 && obstacleAvoidance->neuralBehaviorStatus==0 && obstacleAvoidance->dwaBehaviorStatus == 0))
+        if (haveReceivedWaypoint && (obstacleAvoidance->empiricBehaviorStatus  == 0 && obstacleAvoidance->neuralBehaviorStatus==0 && obstacleAvoidance->dwaBehaviorStatus == 0))
             notifyAfterWaypoint();
     }
     isJustChanged = FALSE;
@@ -678,6 +688,7 @@ void RobotController::notifyAfterWaypoint()
             if(waitTime > 0){
                 QTimer::singleShot(waitTime*MILLIS, this, SLOT(onRestartExploration()));
             } else {
+                ldbg << "Robot controller: Restart exploration after waypoint"<<endl;
                 onRestartExploration();
             }
             haveReceivedWaypoint = false;
@@ -739,6 +750,7 @@ void RobotController::controlRotationRobotStall()
     //ldbg<<"Robot Controller - Speed change: "<<countSpeedChange<<endl;
     isJustChanged = TRUE;
     newAction = TRUE;
+    ldbg << "Robot controller: Restart exploration after rotation stall"<<endl;
     countSpeedChange = 0;
     onRestartExploration();
 }
@@ -1014,67 +1026,55 @@ void RobotController::controlTranslation(const Action &traslation)
     }
 }
 
+void RobotController::onRecomputePath(const Data::Pose &actualFrontier)
+{
+    moveRobot(0,1,0);
+    emit sigRecomputePathRCM(actualFrontier);
+    emit sigChangeStatePathPlanningRCM(true);
+}
+
 void RobotController::onRestartExploration()
 {
     //ldbg << "Robot Controller - onRestartExploration: userEnabled? " << userEnabled << endl;
     if(userEnabled)
     {
         ldbg <<"Robot Controller: restart Exploration"<<endl;
-        emit sigChangeStatetExplorationRCM(true);
+        emit sigChangeStateExplorationRCM(true);
         emit sigChangeStatePathPlanningRCM(true);
     }
 }
 
-void RobotController::timerPart()
+void RobotController::onObstacleStart()
 {
-    if (sonarObstacleTimeNumber == 0){
-        //ldbg<<" Robot Controller - First time"<<endl;
-        //ldbg<< sonarObstacleTimeNumber <<endl;
-        obstacleAvoidanceTimer->singleShot(5000,this,SLOT(onTimeoutObstacle()));
-        //ldbg<<"Robot Controller: obstacle Aovidance Timer. Active?"<<obstacleAvoidanceTimer->isActive()<<endl;
-        sonarObstacleTimeNumber++;
-    }
-    else
+    if (!obstacleAvoidanceTimer->isActive())
     {
-        if (sonarObstacleTimeNumber>2)
-        {
-            //ldbg << "Robot Controller - Too many times"<<endl;
-            sonarObstacleTimeNumber = 0;
-            obstacleAvoidanceTimer->stop();
-            if (!hybridActionQueue->isEmpty()){
-                Pose goal = hybridActionQueue->head()->getValue();
-                //ldbg << "Robot Controller - I cannot reach pose "<<goal.getX() << ","<<goal.getY()<<endl;
-                normalActionQueue->clear();
-                hybridActionQueue->clear();
-                emit sigHandleBadFrontierRCM(goal);
-            }
-            else
-            {
-                //ldbg<<"ActionsToDo"<<normalActionQueue->count()<<endl;
-            }
-        }
-        else
-        {
-            sonarObstacleTimeNumber++;
-            //ldbg<<"Robot Controller - Sonar ha provato volte " << sonarObstacleTimeNumber<<endl;
-            //ldbg<<"Robot Controller - Il timer ? attivo? "<<obstacleAvoidanceTimer->isActive()<<endl;
-        }
+        frontierTime.restart();
+        obstacleAvoidanceTimer->start(TIMEOUT_MSEC);
     }
 }
+
 void RobotController::onTimeoutObstacle()
 {
-    qDebug() << "*******************Ricevuto segnale Timeout*****************************************";
-    int timer = obstacleAvoidanceTimer->interval();
-    //ldbg<<"Robot Controller - Son passati " <<timer<<endl;
-    sonarObstacleTimeNumber = 0;
+    ldbg << "Robot controller: Restart exploration after "<<frontierTime.elapsed()<<endl;
+    obstacleAvoidanceTimer->stop();
+    if (!hybridActionQueue->isEmpty()){
+        Pose goal = hybridActionQueue->head()->getValue();
+        ldbg << "Robot Controller - I cannot reach pose "<<goal.getX() << ","<<goal.getY()<<endl;
+        normalActionQueue->clear();
+        hybridActionQueue->clear();
+        emit sigHandleBadFrontierRCM(goal);
+    }
+    onRestartExploration();
+}
+
+void RobotController::onFrontierReached()
+{
+    ldbg << "Robot controller: Reached frontier after "<<frontierTime.elapsed()<<endl;
+    obstacleAvoidanceTimer->stop();
 }
 
 void RobotController::onHandleBadFrontierRCM(Data::Pose pose)
 {
-    qDebug() << "Robot Controller - On path" << endl;
-    qDebug() << "Robot Controller - Actual Frontier "<< actualFrontier->getX() << " , "<<actualFrontier->getY()<<endl;
-    qDebug() << tryposeCounter<< endl;
-    qDebug() << "Robot Controller - Pose "<< pose.getX() << " , "<<pose.getY()<<endl;
     if (tryposeCounter < 3 && actualFrontier->getX() == pose.getX() && actualFrontier->getY() == pose.getY())
     {
         tryposeCounter++;
@@ -1089,91 +1089,13 @@ void RobotController::onHandleBadFrontierRCM(Data::Pose pose)
     sonarStatus = ON;
     double angle2 = computeRotationFromPoses(actualState->getPose(), pose);
     moveRobot(fromRadiantToDegree(angle2),1,0);
-
-
-
-
 }
-
 
 void RobotController::onNoFrontierAvailableRCM()
 {
     emit sigCleanBadFrontierRCM();
     controlRobotType = NORMAL;;
     moveRobot(0,EMP_GO_STRAIGHT,0);
-}
-
-void RobotController::sendSonarMessage()
-{
-    //Message sonar stop
-    //ldbg<<"Robot Controller - Sto emettendo l'errorNotificationMessage::Navigation"<< endl;
-    ErrorNotificationMessage error(ErrorNotificationMessage::Navigation);
-    //Create the buddy
-    BuddyMessage buddy(robotNameFromIndex(robotId), robotNameFromIndex(BASE_STATION_ID),
-                       BuddyMessage::ErrorNotification ,&error);
-    //Create the wireless
-    WirelessMessage wm(&buddy);
-    //Send the wireless
-    emit sigWirelessMessageRCM(wm);
-    //ldbg << "Robot Controller - Sonar message emitted" << endl;
-}
-
-void RobotController::recomputePath()
-{
-    emit sigRestartExplorationRCM(goalToRecompute->getValue().x(), goalToRecompute->getValue().y());
-}
-
-void RobotController::onObstacleAvoidanceTimerExpired()
-{
-    //ldbg << "Robot Controller - obstacleAvoidanceTimer expired, the obstacle is still there, rebuilding path" << endl;
-    if(!hybridActionQueue->isEmpty()){
-        HybridPoseAction *goal = hybridActionQueue->last();
-        emit sigRestartExplorationRCM(goal->getValue().x(), goal->getValue().y());
-        randomActionTimer->singleShot(RH_RANDOM_ACTION_TIME*MILLIS, this, SLOT(onPerformRandomAction()));
-        SLAM::Geometry::LineSegment obstacle = Rototranslation(actualState->getPose()) * lastFrontSonarData.getSensedObstacle();
-        //add obstacle to the map of the SLAM
-        //ldbg << "Obstacle created: " << obstacle << endl;
-    }
-}
-
-void RobotController::onPerformRandomAction()
-{
-    double minXPose = actualState->getPose().x()-RH_HALF_SQUARE_SIDE;
-    double maxXPose = actualState->getPose().x()+RH_HALF_SQUARE_SIDE;
-    double minYPose = actualState->getPose().y()-RH_HALF_SQUARE_SIDE;
-    double maxYPose = actualState->getPose().y()+RH_HALF_SQUARE_SIDE;
-
-    Point myPoint(actualState->getPose().x(), actualState->getPose().y());
-    //    ////ldbg << "onPerformRandomAction: Rectangle - bottomLeft: "<<minXPose<<", "<<minYPose<<"; topRight: "<<maxXPose<<", "<<maxYPose<<";"<<endl;
-    int end = 0;
-    bool isReachable = false;
-    double randomX = Shared::Random::uniform(minXPose, maxXPose);
-    double randomY = Shared::Random::uniform(minYPose, maxYPose);
-
-    while(!isReachable){
-        if(end >= 100)
-            break;
-        //        ////ldbg << "onPerformRandomAction: sampled point: "<<randomX<<", "<< randomY<<";"<<endl;
-
-        //Ask to SLAM if it reachable
-        if (robotType == KENAF)
-            isReachable = slam->getMap(true).isReachable(myPoint, Point(randomX, randomY), KENAF_RADIUS);
-        else
-            isReachable = slam->getMap(true).isReachable(myPoint, Point(randomX, randomY), P3AT_RADIUS);
-        randomX = Shared::Random::uniform(minXPose, maxXPose);
-        randomY = Shared::Random::uniform(minYPose, maxYPose);
-        end++;
-    }
-    if(isReachable){
-        //        ////ldbg << "onPerformRandomAction: winning point: "<<randomX<<", "<< randomY<<";"<<endl;
-        double desiredTheta = computeRotationFromPoses(actualState->getPose(),
-                                                       Pose(randomX, randomY, 0));
-        Pose p(randomX, randomY, actualState->getPose().getTheta()+desiredTheta);
-        WaypointCommand cmd(p,false, 0);
-        wayPointCounter = 0;
-        handleWaypoint(&cmd);
-        end++;
-    }
 }
 
 void RobotController::setSlamModule(SLAM::SLAMModule *slam)
@@ -1187,11 +1109,11 @@ void RobotController::setStatus(bool status)
     this->userEnabled = status;
     if(status){
         //ldbg << "Robot Controller - setStatus: enabling things..." << endl;
-        emit sigChangeStatetExplorationRCM(true);
+        emit sigChangeStateExplorationRCM(true);
         emit sigChangeStatePathPlanningRCM(true);
     } else {
         //ldbg << "Robot Controller - setStatus: disabling things..." << endl;
-        emit sigChangeStatetExplorationRCM(false);
+        emit sigChangeStateExplorationRCM(false);
         emit sigChangeStatePathPlanningRCM(false);
         onStopRobotForPlanning();
     }
@@ -1199,16 +1121,13 @@ void RobotController::setStatus(bool status)
 
 void RobotController::onFrontierToReachRCM(const Pose frontier)
 {
-    //ldbg <<"Robot Controller - Sto salvando frontier e vale ("<<frontier.getX() << " , "<<frontier.getY()<<endl;
-
     if (frontier.getX() != oldFrontier->getX() && frontier.getY() != oldFrontier->getY())
     {
         delete actualFrontier;
         actualFrontier = new Pose(frontier.getX(),frontier.getY(), frontier.getTheta());
         delete oldFrontier;
         oldFrontier = new Pose(actualFrontier->getX(),actualFrontier->getY(), actualFrontier->getTheta());
-        //ldbg<<"Robot Controller - oldFrontier vale ( "<<oldFrontier->x()<<" , "<<oldFrontier->y() << endl;
-        refindPathCounter = 0;
+
     }
 }
 

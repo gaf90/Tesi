@@ -105,19 +105,40 @@ extern int pathNumber;
 namespace OBS{
 
 extern int obstacle_algorithm;
+extern double obstacle_timeout;
+
+extern int is_test;
+
+extern double test_pose_x;
+extern double test_pose_y;
+extern double test_pose_z;
+extern double test_pose_theta;
+
+extern double test_frontier_x;
+extern double test_frontier_y;
+extern double test_frontier_z;
+extern double test_frontier_theta;
+
+extern double sonar_threshold;
+extern double laser_threshold;
 
 extern int emp_angle_tolerance;
-extern double emp_sonar_threshold;
+extern int emp_min_rotation;
+extern int emp_med_rotation;
+extern int emp_max_rotation;
 extern double emp_straight_meters;
 extern double emp_back_meters;
 
-extern double dwa_laser_threshold;
+extern double emp_frontier_angle_threshold;
+extern double emp_left_right_threshold;
+
 extern double dwa_laser_max_range;
 extern double dwa_time;
 extern double dwa_min_velocity;
 extern double dwa_max_velocity;
 extern double dwa_step;
-extern double dwa_safety;
+extern double dwa_rotation_safety;
+extern double dwa_translation_safety;
 extern double dwa_pose_threshold;
 
 extern double dwa_sigma;

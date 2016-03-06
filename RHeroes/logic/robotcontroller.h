@@ -29,7 +29,7 @@
 #include "data/sonardata.h"
 #include "logic/obstacleavoidancehandler.h"
 
-#define TELEOPERATION_TIMEOUT_MSEC  5000
+#define TIMEOUT_MSEC  Config::OBS::obstacle_timeout;
 
 #define TRASL_TOL 0.1
 #define SPEED_LIMIT_ANGLE 100
@@ -70,7 +70,6 @@ public:
 
     void setStatus(bool enable);
 
-    void timerPart();
     void handleWheelMotionMessage(const Data::BuddyMessage *buddy);
     void onStateUpdatedHybrid(bool isIdle);
     void onStateUpdatedHybrid();
@@ -183,13 +182,13 @@ signals:
 
     //TMP signal
 
-    void sigChangeStatetExplorationRCM(bool restart);
+    void sigChangeStateExplorationRCM(bool restart);
 
     void sigChangeStatePathPlanningRCM(bool restart);
 
     void sigCameraDataRCM(const Data::CameraData &camera, const Data::Pose &pose);
 
-    void sigRestartExplorationRCM(double x, double y);
+    void sigRecomputePathRCM(const Data::Pose);
 
     void sigCleanBadFrontierRCM();
 
@@ -242,16 +241,14 @@ public slots:
 private slots:
 
     void onRestartExploration();
-    void onObstacleAvoidanceTimerExpired();
-    void onPerformRandomAction();
-    void recomputePath();
+    void onRecomputePath(const Data::Pose &actualFrontier);
+    void onObstacleStart();
     void onTimeoutObstacle();
     void onTimeoutTeleoperation();
+    void onFrontierReached();
 
 private:
-    Data::Pose forwardKinematics(const Data::Pose &from, double vr, double vl, double time);
-    bool poseReached(const Data::Pose &pose) const;
-    void sendSonarMessage();
+    bool poseReached(const Data::Pose &pose);
 
 private:
 
@@ -301,8 +298,8 @@ private:
 
     QMutex *streamMutex;
     InverseKinematic *inverseKinematicModule;
-    QTimer *obstacleAvoidanceTimer, *randomActionTimer, *teleOperationTimer;
-    QTime crono;
+    QTimer *obstacleAvoidanceTimer,*randomActionTimer, *teleOperationTimer;
+    QTime crono, frontierTime;
 
     SLAM::SLAMModule *slam;
     PathPlanner::HybridPoseAction *goalToRecompute;

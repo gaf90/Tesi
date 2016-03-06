@@ -104,6 +104,9 @@ void PRMAlgorithm::updatePRM(Map newMap)
         const PathNode* newRobotPose = newMap.lastRobotPose(Config::robotID);
         double xRobotNew= newRobotPose->x();
         double yRobotNew= newRobotPose->y();
+
+        ldbg << "PRM: New robot pose is ("<< xRobotNew  <<", "<< yRobotNew << ")"<<endl;
+
         if(iterationNumber==0)
         {
             ldbg << "PRM Algorithm: update, iteration: " << iterationNumber << endl;
@@ -176,7 +179,7 @@ void PRMAlgorithm::updatePRM(Map newMap)
                 //ldbg << "PRM Algorithm: iteration time: " << timer.elapsed()<<"ms. Added: "<<pointCounter<<" nodes"<< endl;
             }
             else{
-                //plot(newMap);
+                plot(newMap);
                 iterationNumber= iterationNumber + 1;
                 xRobot=xRobotNew;
                 yRobot=yRobotNew;
@@ -255,7 +258,7 @@ void PRMAlgorithm::updatePRM(Map newMap)
                     }
                 }
                 if(modified){
-                    //plot(newMap);
+                    plot(newMap);
                 }
                 xRobot=xRobotNew;
                 yRobot=yRobotNew;
@@ -532,7 +535,7 @@ void PRMAlgorithm::plot(Map map){
         out<<"title(dateString);"<<endl;
 
         out<<"print(f,'-dpng','"<<imagename<<"');"<<endl;
-        out<<"close all;";
+       // out<<"close all;";
 
 
         QString filename2= dataPath;

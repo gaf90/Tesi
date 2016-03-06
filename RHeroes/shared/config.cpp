@@ -1,4 +1,5 @@
 #include "shared/config.h"
+#include <data/pose.h>
 
 #ifndef POARET_EXE
 #   define POARET_EXE "Poaret"
@@ -91,18 +92,39 @@ namespace OBS{
 
 int obstacle_algorithm = 0;
 
+int is_test = 0;
+
+double test_pose_x = 0;
+double test_pose_y = 0;
+double test_pose_z = 1.47;
+double test_pose_theta = 0;
+
+double test_frontier_x = 0;
+double test_frontier_y = 1;
+double test_frontier_z = 1.47;
+double test_frontier_theta = 0;
+
+double sonar_threshold = 0.22;
+double laser_threshold = 0.5;
+double obstacle_timeout = 20000;
+
 int emp_angle_tolerance = 15;
+int emp_min_rotation = 5;
+int emp_med_rotation = 10;
+int emp_max_rotation = 20;
 double emp_straight_meters = 1;
 double emp_back_meters = -0.3;
-double emp_sonar_threshold = 0.22;
-double dwa_laser_threshold = 0.5;
-double dwa_laser_max_range = 10;
+double emp_frontier_angle_threshold = 15;
+double emp_left_right_threshold = 0.2;
 
+
+double dwa_laser_max_range = 10;
 double dwa_time = 1;
 double dwa_min_velocity = 0;
 double dwa_max_velocity = 0.7;
 double dwa_step = 0.5;
-double dwa_safety = 20;
+double dwa_translation_safety = 0.3;
+double dwa_rotation_safety = 20;
 double dwa_pose_threshold = 0.1;
 double dwa_sigma = 1;
 double dwa_alpha_target = 0.5;

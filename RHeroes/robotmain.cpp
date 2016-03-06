@@ -203,22 +203,17 @@ int main(int argc, char *argv[])
 
     if(conf.robotType == "p3at")
     {
-        //PRM
-#ifdef __TESTPRM__
-        TestPRM::TestPRMAlgorithm test;
-        TestPRM::TestGraph test2;
-        TestPRM::TestAStarPRM test3;
-        TestPRM::TestEvaluationPRM test4;
-        //        char* argv2[]={"Poaret.exe","-v1",NULL};
-        char* argv2[]={"Poaret.exe",NULL};
-        int argc2=sizeof(argv2)/sizeof(char*)-1;
-        QTest::qExec(&test,argc2,argv2);
-        QTest::qExec(&test2,argc2,argv2);
-        QTest::qExec(&test3,argc2,argv2);
-        QTest::qExec(&test4,argc2,argv2);
-        //
-#else
-        //        qDebug() << "*******************Creo robot p3at*****************************************";
+        if (Config::OBS::is_test == 1)
+        {
+            double x = Config::OBS::test_pose_x;
+            double y = Config::OBS::test_pose_y;
+            double z = Config::OBS::test_pose_z;
+            double theta = Config::OBS::test_pose_theta;
+
+            conf.location = QString::number(x) + "," + QString::number(y) + "," + QString::number(z);
+            conf.rotation = "0,0," + QString::number(theta);
+        }
+
         Robot piRobot(conf.location, conf.rotation, conf.id, false);
         Config::robotMaxSpeed = 0.9;
         Config::robotType = 0;
@@ -226,7 +221,6 @@ int main(int argc, char *argv[])
         piRobot.spawnRobot();
         //        qDebug() << "*******************Avvia applicazione*****************************************";
         return a.exec();
-#endif
     }
     if(conf.robotType == "air")
     {

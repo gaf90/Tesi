@@ -42,6 +42,9 @@ Robot::Robot(const QString &location, const QString &rotation, const uint identi
     initialRotation(rotation), identifier(identifier), isKenaf(isKenaf)
 {
     QStringList locationList = location.split(","), rotationList = rotation.split(",");
+
+    ldbg << locationList << rotationList<<endl;
+
     slamModule = new SLAM::SLAMModule(identifier,
                                       Pose(locationList[1].toDouble(),
                                            locationList[0].toDouble(),
@@ -76,7 +79,7 @@ Robot::Robot(const QString &location, const QString &rotation, const uint identi
         connect(upisController, SIGNAL(sigMessage(Data::Message)), sensors->at(i), SLOT(onMessageReceived(Data::Message)));
 
         //Sensor --> Robot Controller (Sensor data received)
-        connect(sensors->at(i), SIGNAL(sigSensorData(Data::Message)), robotController, SLOT(onSensorData(Data::Message)));
+        connect(sensors->at(i), SIGNAL(sigSensorData(Data::Message)), robotController, SLOT(onSensorData(Data::Message)), Qt::DirectConnection);
 
         //Sensor --> Slam (Sensor data received)
         connect(sensors->at(i), SIGNAL(sigSensorData(Data::Message)), slamModule, SLOT(onSensorData(Data::Message)), Qt::DirectConnection);
@@ -152,7 +155,7 @@ Robot::Robot(const QString &location, const QString &rotation, const uint identi
     explorationModule->setStartingValues();
     explorationModule->start();
 
-    connect(robotController, SIGNAL(sigChangeStatetExplorationRCM(bool)), explorationModule, SLOT(changeStatus(bool)));
+    connect(robotController, SIGNAL(sigChangeStateExplorationRCM(bool)), explorationModule, SLOT(changeStatus(bool)));
     connect(this, SIGNAL(sigEnableUserCriteria(bool,const Data::HighLevelCommand*)),
             explorationModule, SLOT(onEnableUserCriterionSignal(bool,const Data::HighLevelCommand*)));
     connect(robotController, SIGNAL(sigChangeStatePathPlanningRCM(bool)), pathPlannerModule, SLOT(changeStatus(bool)));
@@ -190,7 +193,7 @@ Robot::Robot(const QString &location, const QString &rotation, const uint identi
 
     //OBSTACLE AVOIDANCE
 
-         connect(robotController, SIGNAL(sigRestartExplorationRCM(double,double)), robotController, SLOT(onRestartExploration()));
+         connect(robotController, SIGNAL(sigRecomputePathRCM(Data::Pose)),explorationModule, SIGNAL(sigFrontierToReachEM(Data::Pose)));
 
     //robotController->setUserEnabled(true);
 }
@@ -351,8 +354,7 @@ void Robot::handleModuleActivationMessage(const BuddyMessage *buddy)
             robotController->sonarStatus = 0;
         else
         {
-            robotController->obstacleAvoidance->empiricBackStatus =0;
-            robotController->obstacleAvoidance->empiricFrontStatus =0;
+            robotController->obstacleAvoidance->empiricBehaviorStatus =0;
             robotController->obstacleAvoidance->neuralBehaviorStatus = 0;
             robotController->obstacleAvoidance->dwaBehaviorStatus = 0;
             robotController->sonarStatus = 1;
@@ -482,8 +484,7 @@ void Robot::onUpdateSignalStrength(QString strength)
     if (strength.toDouble() < -90.0)
     {
         ldbg << "Robot: Error 404 Not found"<<endl;
-        robotController->obstacleAvoidance->empiricBackStatus =0;
-        robotController->obstacleAvoidance->empiricFrontStatus =0;
+        robotController->obstacleAvoidance->empiricBehaviorStatus =0;
         robotController->sonarStatus = 1;
         robotController->stopRobot(true);
         robotController->explorationModuleState = false;
