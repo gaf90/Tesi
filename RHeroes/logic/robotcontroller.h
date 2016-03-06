@@ -29,7 +29,7 @@
 #include "data/sonardata.h"
 #include "logic/obstacleavoidancehandler.h"
 
-#define TIMEOUT_MSEC  Config::OBS::obstacle_timeout;
+#define TIMEOUT_MSEC  Config::OBS::obstacle_timeout
 
 #define TRASL_TOL 0.1
 #define SPEED_LIMIT_ANGLE 100

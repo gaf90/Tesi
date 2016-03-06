@@ -248,7 +248,8 @@ void RobotController::handleWheelMotionMessage(const BuddyMessage *buddy)
 
         sonarStatus = OFF;
         teleoperationStatus = ON;
-        if(almostEqual(wheelMessage->getLeftWheelSpeed(),0,0.01) && almostEqual(wheelMessage->getRightWheelSpeed(),0,0.01)){
+        if(almostEqual(wheelMessage->getLeftWheelSpeed(),0,0.01) && almostEqual(wheelMessage->getRightWheelSpeed(),0,0.01))
+        {
             if(teleOperationTimer->isActive()){
                 teleOperationTimer->stop();
             }
