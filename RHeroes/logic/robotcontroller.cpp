@@ -30,36 +30,29 @@ using namespace SLAM::Geometry;
 //======= CONSTRUCTORS =======//
 RobotController::RobotController(uint id, QString initialLocation, QString initialRotation,bool aisKenaf, QObject *parent) :
     QObject(parent),
-    newAction(FALSE),
+    isNewMovement(FALSE),
     wayPointCounter(0),
-    isSpeedChanged(FALSE),
-    isJustChanged(FALSE),
     normalActionQueue(new QQueue<Action *>()),
     hybridActionQueue(new QQueue<HybridPoseAction *>()),
     actionStartTimestamp(-1),
     pastState(NULL),
     actualState(new RobotState(0.0, 0.0, MAX_BATTERY)),
     robotId(id),
-    lastBatterySent(MAX_BATTERY),
+    previousBattery(MAX_BATTERY),
     streamImage(true),
     streamMutex(new QMutex()),
     isNotificationNeeded(false),
     haveReceivedWaypoint(false),
     waitTime(0),
-    explorationModuleState(true),
-    constantPoseCounter(0),
+    isExplorationEnabled(true),
     stallCounter(0),
-    sonarObstacleTimeNumber(0),
     controlRobotType(NORMAL),
     previousPose(INFINITY, INFINITY, INFINITY),
-    countSpeedChange(0),
     obstacleAvoidanceTimer(new QTimer()),
-    randomActionTimer(new QTimer()),
     teleOperationTimer(new QTimer()),
     sonarStatus(OFF),
     teleoperationStatus(OFF),
-    userEnabled(true),      //PRM
-    goalToRecompute(NULL)
+    isPathPlannerEnabled(true)
 
 {
 
@@ -87,13 +80,12 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     connect(obstacleAvoidance, SIGNAL(sigRecomputePath(Data::Pose)), this, SLOT(onRecomputePath(Data::Pose)),Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigStopRobot(bool)), this, SLOT(stopRobot(bool)),Qt::DirectConnection);
     connect(this, SIGNAL(sigChangeMovementType(int)), obstacleAvoidance, SLOT(setMovementType(int)),Qt::DirectConnection);
-    connect(obstacleAvoidance, SIGNAL(sigDoMovement(double,double)), this, SLOT(doMovement(double,double)), Qt::DirectConnection);
+    connect(obstacleAvoidance, SIGNAL(sigDoMovement(double,double)), this, SLOT(sendWheelMessage(double,double)), Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigHandleTimer()), this, SLOT(onObstacleStart()), Qt::DirectConnection);
     connect(obstacleAvoidance, SIGNAL(sigFrontierReached()), this, SLOT(onFrontierReached()), Qt::DirectConnection);
 
     teleOperationTimer->setSingleShot(true);
 
-    refindPathCounter = 0;
     moveToThread(QApplication::instance()->thread());
 
     QStringList loc = initialLocation.split(",");
@@ -101,6 +93,8 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
     double x = loc[0].toDouble();
     double y = loc[1].toDouble();
     double t = rot[0].toDouble();
+
+    previousHeading = t;
 
     if (Config::OBS::is_test == 1)
     {
@@ -123,11 +117,6 @@ RobotController::RobotController(uint id, QString initialLocation, QString initi
 //======= DESTRUCTORS =======//
 RobotController::~RobotController()
 {
-    if(goalToRecompute != NULL)
-        delete goalToRecompute;
-    if(randomActionTimer->isActive())
-        randomActionTimer->stop();
-    delete randomActionTimer;
     if(obstacleAvoidanceTimer->isActive())
         obstacleAvoidanceTimer->stop();
     delete obstacleAvoidanceTimer;
@@ -154,12 +143,10 @@ void RobotController::onTimeoutTeleoperation()
 {
     //ldbg << "RobotController: Teleoperation Timeout expired. Is active exploration module? "<<explorationModuleState<<". Is active user? " <<userEnabled<<endl;
 
-    if (explorationModuleState && userEnabled)
+    if (isExplorationEnabled && isPathPlannerEnabled)
     {
         sonarStatus = ON;
         teleoperationStatus = OFF;
-
-        randomActionTimer->stop();
         obstacleAvoidanceTimer->stop();
         ldbg << "Robot controller: Restart exploration after teleoperation timeout"<<endl;
         onRestartExploration();
@@ -174,17 +161,19 @@ void RobotController::onSensorData(const Message &data)
 {
     if(typeid(data) == typeid(const CameraData &))
     {
-
         const CameraData &camera = (const CameraData &)data;
+        //ldbg << "Robot Controller: Received camera data at "<<QTime::currentTime().toString("hh:mm:ss:zzz") <<endl;
         handleCameraData(camera);
     }
     else if(typeid(data) == typeid(const StateData &))
     {
+        // ldbg << "Robot Controller: Received state data at "<<QTime::currentTime().toString("hh:mm:ss:zzz") <<endl;
         const StateData &state = (const StateData &)data;
         handleStateData(state);
     }
     else if(typeid(data) == typeid(const SonarData &) )
     {
+        // ldbg << "Robot Controller: Received sonar data at "<<QTime::currentTime().toString("hh:mm:ss:zzz") <<endl;
         const SonarData &sonar = (const SonarData &)data;
 
         const Data::Action *actualAction = NULL;
@@ -196,6 +185,7 @@ void RobotController::onSensorData(const Message &data)
 
     else if(typeid(data) == typeid(const LaserData &) )
     {
+        //ldbg << "Robot Controller: Received laser data at "<<QTime::currentTime().toString("hh:mm:ss:zzz") <<endl;
         Data::LaserData &laser = (LaserData &)data;
         obstacleAvoidance->setLaser(laser);
 
@@ -203,6 +193,7 @@ void RobotController::onSensorData(const Message &data)
 
     else if(typeid(data) == typeid(const WirelessMessage &))
     {
+        // ldbg << "Robot Controller: Received wireless data at "<<QTime::currentTime().toString("hh:mm:ss:zzz") <<endl;
         handleWirelessData(data);
     }
 }
@@ -210,7 +201,10 @@ void RobotController::onSensorData(const Message &data)
 void RobotController::handleCameraData(const CameraData &camera)
 {
     if(!streamImage)
+    {
+        ldbg << "Robot Controller - camera: Not streaming"<<endl;
         return;
+    }
 
     BuddyMessage buddyMessage(robotNameFromIndex(robotId),
                               robotNameFromIndex(BASE_STATION_ID), &camera);
@@ -225,11 +219,12 @@ void RobotController::handleCameraData(const CameraData &camera)
 
 void RobotController::handleStateData(const Data::StateData &state)
 {
-    actualState->setBattery(state.getBattery());
-    if(state.getBattery() == lastBatterySent - BATTERY_ONE_PERCENT)
+    double actualBattery = state.getBattery();
+    actualState->setBattery(actualBattery);
+    if(actualBattery == previousBattery - BATTERY_ONE_PERCENT)
     {
-        lastBatterySent = state.getBattery();
-        InfoMessage infoMessage(BATTERY_STATUS, QString::number(lastBatterySent));
+        previousBattery = actualBattery;
+        InfoMessage infoMessage(BATTERY_STATUS, QString::number(previousBattery));
         BuddyMessage buddy(robotNameFromIndex(robotId), robotNameFromIndex(BASE_STATION_ID), &infoMessage );
         WirelessMessage wirelessMessage(&buddy);
 
@@ -239,30 +234,44 @@ void RobotController::handleStateData(const Data::StateData &state)
     }
 }
 
-
 void RobotController::handleWheelMotionMessage(const BuddyMessage *buddy)
 {
+    const WheelMessage *wheelMessage = buddy->getWheelMessage();
+    ldbg <<"Robot controller - wheel motion: Stop robot"<<endl;
+    stopRobot(true);
+
+    sonarStatus = OFF;
+    teleoperationStatus = ON;
+    double leftSpeed = wheelMessage->getLeftWheelSpeed();
+    double rightSpeed = wheelMessage->getRightWheelSpeed();
+    if(leftSpeed == 0 && rightSpeed == 0)
     {
-        const WheelMessage *wheelMessage = buddy->getWheelMessage();
-        stopRobot(true);
+        if(teleOperationTimer->isActive())
+            teleOperationTimer->stop();
 
-        sonarStatus = OFF;
-        teleoperationStatus = ON;
-        if(almostEqual(wheelMessage->getLeftWheelSpeed(),0,0.01) && almostEqual(wheelMessage->getRightWheelSpeed(),0,0.01))
-        {
-            if(teleOperationTimer->isActive()){
-                teleOperationTimer->stop();
-            }
-            //ldbg << "handleWirelessData. restart timers"<<endl;
-            crono.start();
-            teleOperationTimer->start(TIMEOUT_MSEC);
-        }
-        emit sigChangeStateExplorationRCM(false);
-        emit sigChangeStatePathPlanningRCM(false);
-        emit sigCleanBadFrontierRCM();
-
-        doMovement(wheelMessage->getLeftWheelSpeed(), wheelMessage->getRightWheelSpeed());
+        ldbg << "Robot controller - wheel motion: Restart teleoperation timer."<<endl;
+        teleOperationTimer->start(TIMEOUT_MSEC);
     }
+    ldbg <<"Robot controller - wheel motion: Deactivate exploration and path planner. Clean bad frontier."<<endl;
+
+    isExplorationEnabled = false;
+    isPathPlannerEnabled = false;
+    emit sigChangeStateExplorationRCM(false);
+    emit sigChangeStatePathPlanningRCM(false);
+
+    emit sigCleanBadFrontierRCM();
+
+    ldbg <<"Robot controller - wheel motion: Do movement ("<< leftSpeed <<"," << rightSpeed <<","<<endl;
+
+    sendWheelMessage(leftSpeed, rightSpeed);
+}
+
+void RobotController::sendWheelMessage(double leftSpeed, double rightSpeed)
+{
+    actualState->setLeftSpeed(leftSpeed);
+    actualState->setRightSpeed(rightSpeed);
+    WheelMessage command(leftSpeed, rightSpeed);
+    emit sigDriverMessageRobot(command);
 }
 
 void RobotController::handleWirelessData(const Message &data)
@@ -275,82 +284,11 @@ void RobotController::handleWirelessData(const Message &data)
     }
 }
 
-void RobotController::checkIfIdle(double comp_x, double comp_y, double comp_t, double timestamp)
-{
-    const Pose pose(comp_x, comp_y, comp_t);
-    if(actualState->getPose() == pose && !normalActionQueue->isEmpty()){
-        ////ldbg <<"RobotController: Robot is in the right position and it's doing other things."<<endl;
-        constantPoseCounter++;
-    } else {
-        ////ldbg <<"Robot is doing nothing. Setting new pose"<<endl;
-        constantPoseCounter=0;
-        actualState->setPose(pose);
-        actualState->setTimestamp(timestamp);
-        if(pastState == NULL){
-            pastState = new RobotState(actualState->getRightSpeed(), actualState->getLeftSpeed(), actualState->getBattery());
-            pastState->setPose(pose);
-            pastState->setTimestamp(timestamp);
-        }
-    }
-}
-
-void RobotController::checkIfStall(double comp_x, double comp_y, double comp_t)
-{
-    const Pose pose(comp_x, comp_y, comp_t);
-    if(actualState->getPose() == pose && !actualState->isIdle()){
-        stallCounter++;
-        if(stallCounter > STALL_LIMIT){
-            ////ldbg <<space <<"Robot is stall." << endl;
-            actualState->setStall(true);
-        }
-    } else {
-        stallCounter=0;
-        ////ldbg <<space <<"Robot isn't stall" << endl;
-        actualState->setStall(false);
-    }
-}
-
-void RobotController::checkAround(const Data::Pose &pose)
-{
-    Point oldPosePoint(actualState->getPose().getX(), actualState->getPose().getY());
-    Point newPosePoint(pose.getX(), pose.getY());
-
-    ////ldbg <<"Robot Controller: Old pose is (" << oldPosePoint.x()<< ", " << oldPosePoint.y()<<" ) "<<endl;
-    ////ldbg << "Robot Controller: New pose is (" << pose.getX()<< ", " << pose.getY() <<" ) "<<endl;
-
-    double distance = oldPosePoint.distance(newPosePoint);
-    double angDist = fabs(actualState->getPose().getTheta()-pose.getTheta());
-
-    ////ldbg <<"Robot Controller: Robot pose is distance from new pose of " << distance << " meters and of "<< angDist <<" radiant"<< endl;
-
-    if(distance <= TRASL_TOL && angDist <= EMP_ANGLE_TOL && !actualState->isIdle()){
-        counterAround++;
-        if(counterAround > 3*STALL_LIMIT)
-        {
-            ////ldbg << "Robot Controller: Robot is near enough."<<endl;
-            robotAround = NEAR_TO_POSE;
-        }
-    } else {
-        counterAround = 0;
-        ////ldbg << "Robot Controller: Robot is far away from position."<<endl;
-        robotAround = FAR_TO_POSE;
-
-    }
-}
-
 void RobotController::handleWaypoint(const WaypointCommand * waypoint)
 {
-    //ldbg <<"Robot Controller: Waypoint received at (" << waypoint->getWaypoint().getX()
-    //<< ", " << waypoint->getWaypoint().getY() << ", "<< waypoint->getWaypoint().getTheta()<< " } "<<endl;
-    //ldbg <<"Robot Controller: Actual Pose = (" << actualState->getPose().getX()<<", "
-    //<<actualState->getPose().getY()<<", "<<actualState->getPose().getTheta()<<")"<<endl;
-
     actualWaypoint = new WaypointCommand(waypoint->getWaypoint(), false, 0.0);
-
+    ldbg <<"Robot Controller: Received waypoint. Stop robot"<<endl;
     stopRobot(true);
-
-    //ldbg <<"Robot Controller: Actual Pose = (" << actualState->getPose().getX()<<", "
-    //<<actualState->getPose().getY()<<", "<<actualState->getPose().getTheta()<<")"<<endl;
 
     emit sigCleanBadFrontierRCM();
 
@@ -360,54 +298,62 @@ void RobotController::handleWaypoint(const WaypointCommand * waypoint)
     isNotificationNeeded = waypoint->isNotificationNeeded();
     waitTime = waypoint->getTimer();
     Pose pointToReach = waypoint->getWaypoint();
-    double angle2 = computeRotationFromPoses(actualState->getPose(), pointToReach);
-    //ldbg <<"Robot Controller: Angle to perform: " << fromRadiantToDegree(angle2) << endl;
+    double rotation = fromRadiantToDegree(computeRotationFromPoses(actualState->getPose(), pointToReach));
 
-    //Translation
     double dx2 = pow(pointToReach.getX()- actualState->getPose().getX(), 2);
     double dy2 = pow(pointToReach.getY()- actualState->getPose().getY(), 2);
     double trasl = sqrt(dy2+dx2);
-    //ldbg <<"Robot Controller: Metres to move: " << trasl << endl;
-    moveRobot(fromRadiantToDegree(angle2), trasl, 0.0);
+
+    if (rotation>0 && rotation<EMP_ANGLE_TOL)
+        rotation+=EMP_ANGLE_TOL;
+    else if (rotation<0 && rotation>-EMP_ANGLE_TOL)
+        rotation-=EMP_ANGLE_TOL;
+
+    moveRobot(rotation, trasl, 0.0);
 }
 
 
-void RobotController::insertActionToPerform(Action::ActionType type, double value)
-{
-    if(type == Action::Rotation){
-        //ldbg << "RobotController: Pathplanner ordered me to perform a rotation of value " << value << endl;
-        moveRobot(value, 0.0, 0.0);
-    } else  {
-        //ldbg << "RobotController: Pathplanner ordered me to perform a translation of value " << value << endl;
-        moveRobot(0.0, value, 0.0);
-    }
-}
+//======= PATH PLANNER =======//
 
 void RobotController::onPerformActionRCM(PathPlanner::AbstractAction *action)
 {
     sonarStatus = ON;
-    if (obstacleAvoidance->empiricBehaviorStatus >0 && obstacleAvoidance->neuralBehaviorStatus>0 && obstacleAvoidance->dwaBehaviorStatus>0 && normalActionQueue->size()!=0)
+    if (obstacleAvoidance->empiricBehaviorStatus>0 || obstacleAvoidance->dwaBehaviorStatus>0 || obstacleAvoidance->neuralBehaviorStatus>0)
     {
         ldbg << "Robot Controller: Ignore perform action" << endl;
         return;
     }
 
-    if(obstacleAvoidanceTimer != NULL && obstacleAvoidanceTimer->isActive()){
-        obstacleAvoidanceTimer->stop();
-    }
-
-    if(randomActionTimer->isActive())
-        randomActionTimer->stop();
-
-
-    //ldbg << "Robot Controller: I have received the action!"<<endl;
-    if(typeid(*action) == typeid(Data::Action)){
-        //ldbg << "Robot Controller: Action of type Action"<<endl;
+    if(typeid(*action) == typeid(Data::Action))
+    {
         Data::Action *act = (Data::Action *)action;
-        insertActionToPerform(act->getType(), act->getValue());
+        if(act->getType() == Action::Rotation)
+        {
+            double rotation = act->getValue();
+
+            if (rotation>0 && rotation<EMP_ANGLE_TOL)
+                rotation+=EMP_ANGLE_TOL;
+            else if (rotation<0 && rotation>-EMP_ANGLE_TOL)
+                rotation-=EMP_ANGLE_TOL;
+
+            moveRobot(rotation, 0.0, 0.0);
+        }
+        else
+        {
+            double translation = act->getValue();
+
+            if (translation>0 && translation<TRASL_TOL)
+                translation+=TRASL_TOL;
+            else if (translation<0 && translation>-TRASL_TOL)
+                translation-=TRASL_TOL;
+
+            moveRobot(0.0,translation, 0.0);
+        }
+
         controlRobotType = NORMAL;
-    } else if(typeid(*action) == typeid(HybridPoseAction)){
-        //ldbg << "Robot Controller: Action of type HybridPoseAction"<<endl;
+    }
+    else if(typeid(*action) == typeid(HybridPoseAction))
+    {
         HybridPoseAction *act = (HybridPoseAction *)action;
         HybridPoseAction *toEnqueue = new HybridPoseAction(act->getValue());
         hybridActionQueue->enqueue(toEnqueue);
@@ -415,69 +361,89 @@ void RobotController::onPerformActionRCM(PathPlanner::AbstractAction *action)
     }
 }
 
-//======= UTILITIES =======//
-
-RobotState * RobotController::getActualState()
-{
-    return actualState;
-}
-
-void RobotController::updatePose(const Pose &pose)
-{
-    actualState->setPose(pose);
-}
-
-void RobotController::setStreamImageFlag(bool stream)
-{
-    streamMutex->lock();
-    streamImage = stream;
-    streamMutex->unlock();
-}
-
+//======= SLAM =======//
 void RobotController::onNewRobotPose(SLAM::TimedPose pose)
 {
-    //ldbg << "Robot Controller: Slam pose received: " << pose << endl;
+    double distance = actualState->getPose().getDistance(pose);
+    double rotation = wrapDeg(fromRadiantToDegree(angularDistance(actualState->getPose().getTheta(), pose.getTheta())));
+    //ldbg << "Robot Controller - SLAM: Pose is " << pose <<" at "<<QTime::currentTime().toString("hh:mm:ss:zzz");
+    //ldbg << ". D = "<<distance<<", R = "<<rotation <<endl;
+    if(distance<TRASL_TOL && abs(rotation) <EMP_ANGLE_TOL)
+    {
+        //ldbg << "Robot Controller: Slam pose received: " << pose <<" at "<<QTime::currentTime().toString("hh:mm:ss:zzz");
+        //ldbg << ". D = "<<distance<<", R = "<<rotation <<endl;
+        if (normalActionQueue->isEmpty())
+        {
+            stallCounter++;
+            if(stallCounter > STALL_NUMBER)
+            {
+                // ldbg <<"Robot Controller: Robot is doing nothing for "<< stallCounter <<" times!"<<endl;
+                //ldbg <<"Robot controller: Robot is stall! Restart exploration"<<endl;
+                stallCounter = 0;
+                actualState->setStall(true);            }
+        }
+        else
+        {
+            stallCounter = 0;
+            actualState->setStall(false);
+        }
+    }
+    else
+    {
+        //ldbg <<"Robot controller: Robot moved from "<<actualState->getPose() << " to "<<pose <<" at "<<QTime::currentTime().toString("hh:mm:ss:zzz") <<".Update state data"<<endl;
+        previousPose = actualState->getPose();
+        actualState->setPose(pose);
+        actualState->setTimestamp(pose.getTimestamp());
+        if(pastState == NULL){
+            pastState = new RobotState(actualState->getRightSpeed(), actualState->getLeftSpeed(), actualState->getBattery());
+            pastState->setPose(pose);
+            pastState->setTimestamp(pose.getTimestamp());
+        }
+    }
 
-    checkIfStall(pose.getX(), pose.getY(), pose.getTheta());
-    checkIfIdle(pose.getX(), pose.getY(), pose.getTheta(), pose.getTimestamp());
-    checkAround(pose);
-    //Emit the signal for the update of the state
     emit sigRobotStateUpdated();
 }
 
+
 //======= ROBOT MOTION =======//
+
 void RobotController::moveRobot(double angle1, double translation, double angle2)
 {
-    odometryClosedLoop(angle1, translation, angle2);
-}
-
-void RobotController::onStopRobotForPlanning()
-{
-    //ldbg << "Robot Controller: Path planner stops the robot. Restart Exploration" << endl;
-    stopRobot(true);
-    emit sigChangeStateExplorationRCM(false);
-}
-
-
-void RobotController::onRobotNotReachable()
-{
-    //ldbg << "Robot Controller:  Path planner stops the robot. No restart exploration." << endl;
-    stopRobot(true);
-}
-
-void RobotController::doMovement(double leftSpeed, double rightSpeed)
-{
-    actualState->setLeftSpeed(leftSpeed);
-    actualState->setRightSpeed(rightSpeed);
-    WheelMessage command(leftSpeed, rightSpeed);
-    emit sigDriverMessageRobot(command);
+    //I build and enqueue the first action: ROTATION
+    if(angle1 != 0.0){
+        ldbg << "Robot Controller: I have received a rotation of "<< angle1<<endl;
+        double radiant1 = fromDegreeToRadiants(angle1);
+        Action* act1 = new Action();
+        act1->setType(Action::Rotation);
+        act1->setValue(radiant1);
+        normalActionQueue->enqueue(act1);
+        isNewMovement = TRUE;
+    }
+    //I build and enqueue the second action: TRANSLATION
+    if(translation != 0.0){
+        ldbg << "Robot Controller: I have received a translation of "<< translation<<endl;
+        Action* act2 = new Action();
+        act2->setType(Action::Translation);
+        act2->setValue(translation);
+        normalActionQueue->enqueue(act2);
+        isNewMovement = TRUE;
+    }
+    //I build and enqueue the third action: ROTATION
+    if(angle2 != 0.0){
+        ldbg << "Robot Controller: I have received a rotation of "<< angle2<<endl;
+        double radiant3 = fromDegreeToRadiants(angle2);
+        Action* act3 = new Action();
+        act3->setType(Action::Rotation);
+        act3->setValue(radiant3);
+        normalActionQueue->enqueue(act3);
+        isNewMovement = TRUE;    }
 }
 
 void RobotController::stopRobot(bool saveState)
 {
     ldbg << "RobotController: stop robot."<<endl;
 
-    doMovement(0,0);
+    sendWheelMessage(0,0);
     if(saveState){
         saveRobotState();
     }
@@ -502,48 +468,43 @@ void RobotController::saveRobotState()
     pastState = newState;
 }
 
-
-//======= ROBOT CONTROL =======//
-void RobotController::odometryClosedLoop(double angle1, double translation, double angle2)
+void RobotController::onStopRobotForPlanning()
 {
-    //I build and enqueue the first action: ROTATION
-    if(angle1 != 0.0){
-        double radiant1 = fromDegreeToRadiants(angle1);
-        Action* act1 = new Action();
-        act1->setType(Action::Rotation);
-        act1->setValue(radiant1);
-        ldbg << "Robot Controller - odometryClosedLoop: Enqueued a rotation of " << fromRadiantToDegree(radiant1) << " grades" << endl;
-        normalActionQueue->enqueue(act1);
-        newAction = TRUE;
+
+    if (obstacleAvoidance->empiricBehaviorStatus>0 || obstacleAvoidance->dwaBehaviorStatus>0 || obstacleAvoidance->neuralBehaviorStatus>0)
+    {
+        ldbg << "Robot Controller: Ignore path planner."<<endl;
     }
-    //I build and enqueue the second action: TRANSLATION
-    if(translation != 0.0){
-        Action* act2 = new Action();
-        act2->setType(Action::Translation);
-        act2->setValue(translation);
-        normalActionQueue->enqueue(act2);
-        ldbg<< "Robot Controller - odometryClosedLoop: Enqueued a translation of " << translation << " meters" << endl;
-        newAction = TRUE;
+    else
+    {
+        stopRobot(true);
+        isExplorationEnabled = false;
+        emit sigChangeStateExplorationRCM(false);
     }
-    //I build and enqueue the third action: ROTATION
-    if(angle2 != 0.0){
-        double radiant3 = fromDegreeToRadiants(angle2);
-        Action* act3 = new Action();
-        act3->setType(Action::Rotation);
-        act3->setValue(radiant3);
-        normalActionQueue->enqueue(act3);
-        newAction = TRUE;
-        ldbg << "Robot Controller - odometryClosedLoop: Enqueued a rotation of " << fromRadiantToDegree(angle2) << " grades" << endl;
+}
+
+
+void RobotController::onRobotNotReachable()
+{
+    if (obstacleAvoidance->empiricBehaviorStatus>0 || obstacleAvoidance->dwaBehaviorStatus>0 || obstacleAvoidance->neuralBehaviorStatus>0)
+    {
+        ldbg << "Robot Controller: Ignore wss. Doing last movement."<<endl;
+    }
+    else
+    {
+        ldbg << "Robot Controller:  Path planner stops the robot. No restart exploration." << endl;
+        stopRobot(true);
     }
 }
 
 bool RobotController::poseReached(const Pose &pose)
 {
-    const Pose current = actualState->getPose();
-    const Point toReach(pose.x(), pose.y());
-    const Point robotLocation(current.x(), current.y());
-    const bool directCheck = robotLocation.distance(toReach) <= INVERSE_KIN_TRASL_TOL &&
-            std::abs(wrapRad(current.theta() - pose.theta())) <= INVERSE_KIN_ANG_TOL;
+    const Pose actualPose = actualState->getPose();
+    const Point actualFrontierPoint(pose.x(), pose.y());
+    const Point robotLocation(actualPose.x(), actualPose.y());
+
+    const bool directCheck = robotLocation.distance(actualFrontierPoint) <= INVERSE_KIN_TRASL_TOL &&
+            abs(wrapRad(actualPose.theta() - pose.theta())) <= INVERSE_KIN_ANG_TOL;
 
     if(std::isinf(previousPose.theta()))
     {
@@ -552,8 +513,8 @@ bool RobotController::poseReached(const Pose &pose)
     }
     else
     {
-        const LineSegment path(previousPose.x(), previousPose.y(), current.x(), current.y());
-        double theta1 = current.theta(), theta2 = current.theta();
+        const LineSegment path(previousPose.x(), previousPose.y(), actualPose.x(), actualPose.y());
+        double theta1 = actualPose.theta(), theta2 = actualPose.theta();
         bool angularOvershoot;
         if(theta2 < theta1)
             exchange(theta1, theta2);
@@ -565,7 +526,7 @@ bool RobotController::poseReached(const Pose &pose)
         {
             angularOvershoot = pose.theta() >= theta1 && pose.theta() <= theta2;
         }
-        return (path.intersectsCircle(toReach, INVERSE_KIN_TRASL_TOL) &&
+        return (path.intersectsCircle(actualFrontierPoint, INVERSE_KIN_TRASL_TOL) &&
                 angularOvershoot) || directCheck;
     }
 }
@@ -579,104 +540,26 @@ void RobotController::onStateUpdated()
     bool isIdle = actualState->isIdle();
 
     if(controlRobotType == HYBRID && !hybridActionQueue->isEmpty())
-        onStateUpdatedHybrid();
+        onStateUpdatedHybrid(isIdle);
     else if (controlRobotType == NORMAL && !normalActionQueue->isEmpty())
-        onStateUpdatedNormal(isIdle);
+        onStateUpdatedNormal();
     else
     {
-        if(isIdle && teleoperationStatus == OFF)
+        if(isIdle && teleoperationStatus == OFF && !isExplorationEnabled)
         {
-            newAction = FALSE;
-            stopRobot(false);
+            isNewMovement = FALSE;
+            ldbg <<"Robot controller: Robot is idle, teleoperation is off. Stop robot and restart "<<endl;
+            stopRobot(true);
+            obstacleAvoidance->empiricBehaviorStatus = 0;
+            obstacleAvoidance->dwaBehaviorStatus = 0;
+            obstacleAvoidance->neuralBehaviorStatus = 0;
+            isExplorationEnabled = true;
             emit sigChangeStateExplorationRCM(true);
         }
         if (haveReceivedWaypoint && (obstacleAvoidance->empiricBehaviorStatus  == 0 && obstacleAvoidance->neuralBehaviorStatus==0 && obstacleAvoidance->dwaBehaviorStatus == 0))
             notifyAfterWaypoint();
     }
-    isJustChanged = FALSE;
 }
-
-void RobotController::onStateUpdatedHybrid()
-{
-
-    //ldbg << "Robot Controller - onStateUpdated: actionQueue size = " << hybridActionQueue->size() << endl;
-
-    //peek the first action to perform
-    HybridPoseAction *act = hybridActionQueue->head();
-
-    bool robotStopped = almostEqual(actualState->getRightSpeed(), 0) && almostEqual(actualState->getLeftSpeed(), 0);
-
-    if(poseReached(act->getValue()) || robotStopped)
-    {
-        //pose reached
-        //ldbg << "Robot Controller - onStateUpdated: deque & delete" << endl;
-        actionStartTimestamp = actualState->getTimestamp();
-        act = hybridActionQueue->dequeue();
-        delete act;
-        saveRobotState();
-        if(robotAround == NEAR_TO_POSE)
-        {
-            robotAround = FAR_TO_POSE;
-            counterAround = 0;
-        }
-
-    }
-    if(hybridActionQueue->isEmpty())
-    {
-        //ldbg << "Robot Controller - onStateUpdated: The queue is empty!" << endl;
-        actionStartTimestamp = -1;
-        stopRobot(false);
-    }
-    else
-    {
-        if(actionStartTimestamp < 0)
-            actionStartTimestamp = actualState->getTimestamp();
-
-        act = hybridActionQueue->head();
-
-        const Data::Pose displacedPose(SLAM::Geometry::Rototranslation(actualState->getPose(), act->getValue()).vectorForm());
-        pastHybridPoseToReach = displacedPose;
-
-        double timeLeft = actionStartTimestamp + DELTA_T - actualState->getTimestamp();
-        if(timeLeft < DELTA_T/5)
-            timeLeft = DELTA_T/5;
-
-        WheelSpeeds ws = inverseKinematicModule->computeSpeeds(displacedPose, timeLeft);
-
-        //ldbg << "Robot Controller: action value = " << act->getValue() << endl;
-        //ldbg << "Robot Controller: Speeds: left = " << ws.getLeftSpeed() <<", right = " << ws.getRightSpeed() << endl;
-        if(controlRobotType == HYBRID)
-            doMovement(ws.getLeftSpeed(), ws.getRightSpeed());
-    }
-
-    previousPose = actualState->getPose();
-}
-
-void RobotController::onStateUpdatedNormal(bool isIdle)
-{
-    Action* todo = normalActionQueue->head();
-    switch(todo->getType())
-    {
-    //==== ROTATION CASE ====//
-    case Action::Rotation:
-        //ldbg<<"Robot Controller - onStateUpdated: controlRotation"<<endl;
-        controlRotation(*todo);
-        break;
-        //==== TRANSLATION CASE ====//
-    case Action::Translation:
-        //ldbg<<"Robot Controller - onStateUpdated: controlTranslation"<<endl;
-        controlTranslation(*todo);
-        break;
-    default:
-        //I don't know how to get here, maybe an incorrect use of the Action's type field
-        //For safety, I stop the robot!
-
-        //ldbg<<"Robot Controller - Error"<<endl;
-        stopRobot(true);
-        break;
-    }
-}
-
 
 void RobotController::notifyAfterWaypoint()
 {
@@ -684,7 +567,7 @@ void RobotController::notifyAfterWaypoint()
     //ldbg << haveReceivedWaypoint<<endl;
     if(haveReceivedWaypoint)
     {
-        if(userEnabled)
+        if(isExplorationEnabled && isPathPlannerEnabled)
         {
             if(waitTime > 0){
                 QTimer::singleShot(waitTime*MILLIS, this, SLOT(onRestartExploration()));
@@ -707,6 +590,7 @@ void RobotController::notifyAfterWaypoint()
     if(isNotificationNeeded)
     {
         isNotificationNeeded = false;
+        ldbg <<"Robot Controller: robot finish movement. Stop and notify"<<endl;
         stopRobot(true);
         //Create the information
         QString str(robotNameFromIndex(robotId));
@@ -720,241 +604,267 @@ void RobotController::notifyAfterWaypoint()
     }
 }
 
-void RobotController::controlRotationNewAction(const Action &rotation)
-{
-    constantPoseCounter = 0;
 
-    if(rotation.getValue()> 0)
+void RobotController::onStateUpdatedHybrid(bool isIdle)
+{
+    HybridPoseAction *act = hybridActionQueue->head();
+
+    if(poseReached(act->getValue()) || isIdle)
     {
-        ldbg << "Robot Controller - ControlRotation: I rotate clockwise!"<< endl;
-        if(rotation.getValue()<= fromDegreeToRadiants(SPEED_LIMIT_ANGLE) || slowMotion)
-            doMovement(-LOW_SPEED, LOW_SPEED);
-        else
-            doMovement(-MED_SPEED, MED_SPEED);
+        actionStartTimestamp = actualState->getTimestamp();
+        act = hybridActionQueue->dequeue();
+        delete act;
+        saveRobotState();
+
+    }
+
+    if(hybridActionQueue->isEmpty())
+    {
+        ldbg << "Robot Controller - onStateUpdated: The queue is empty!. Stop robot" << endl;
+        actionStartTimestamp = -1;
+        stopRobot(false);
     }
     else
     {
-        ldbg << "Robot Controller - ControlRotation: I rotate counter-clockwise!"<< endl;
-        if(rotation.getValue()>= -(fromDegreeToRadiants(SPEED_LIMIT_ANGLE)) || slowMotion)
-            doMovement(LOW_SPEED, -LOW_SPEED);
-        else
-            doMovement(MED_SPEED, -MED_SPEED);
+        if(actionStartTimestamp < 0)
+            actionStartTimestamp = actualState->getTimestamp();
+
+        act = hybridActionQueue->head();
+
+        const Data::Pose displacedPose(SLAM::Geometry::Rototranslation(actualState->getPose(), act->getValue()).vectorForm());
+        pastHybridPoseToReach = displacedPose;
+
+        double timeLeft = actionStartTimestamp + DELTA_T - actualState->getTimestamp();
+        if(timeLeft < DELTA_T/5)
+            timeLeft = DELTA_T/5;
+
+        WheelSpeeds ws = inverseKinematicModule->computeSpeeds(displacedPose, timeLeft);
+
+        if(controlRobotType == HYBRID)
+            sendWheelMessage(ws.getLeftSpeed(), ws.getRightSpeed());
     }
-    isSpeedChanged = FALSE;
-    newAction = FALSE;
+
+    previousPose = actualState->getPose();
 }
 
-void RobotController::controlRotationRobotStall()
+void RobotController::onStateUpdatedNormal()
+{
+    Action* actualAction = normalActionQueue->head();
+    switch(actualAction->getType())
+    {
+    //==== ROTATION CASE ====//
+    case Action::Rotation:
+        controlRotation(*actualAction);
+        break;
+        //==== TRANSLATION CASE ====//
+    case Action::Translation:
+        controlTranslation(*actualAction);
+        break;
+    default:
+
+        ldbg<<"Robot Controller - Error"<<endl;
+        stopRobot(true);
+        break;
+    }
+}
+
+
+
+void RobotController::controlRotation(const Action &rotation)
+{
+    if(actualState->isStall())
+    {
+        ldbg<<"Robot Controller - Control rotation: Stall."<<endl;
+        handleRobotStall();
+    }
+    else
+    {
+        double deltaHeading = rotation.getValue();
+        double actualHeading = actualState->getPose().getTheta();
+        double pastHeading = pastState->getPose().getTheta();
+
+        if(isNewMovement)
+            controlStartRotation(deltaHeading);
+        else if (actualHeading!=previousHeading)
+        {
+            previousHeading = actualHeading;
+            double finalHeading = wrapRad(pastHeading + deltaHeading);
+            double lastHeading = fromRadiantToDegree(angularDistance(actualHeading, finalHeading));
+            ldbg<<" "<<endl;
+            ldbg <<"Robot Controller - Control Rotation: DH = "<<fromRadiantToDegree(deltaHeading) <<
+                   ", PH = " << fromRadiantToDegree(pastHeading) <<
+                   ", AH = "<< fromRadiantToDegree(actualHeading) <<
+                   ", FH = "<< fromRadiantToDegree(finalHeading)<<
+                   ", LH = "<< lastHeading <<endl;
+            if(fabs(lastHeading) <= EMP_ANGLE_TOL)
+            {
+                controlEndRotation();
+            }
+            else if (deltaHeading>0)
+            {
+                controlLeftRotation(lastHeading);
+            }
+            else if(deltaHeading<0)
+            {
+                controlRightRotation(lastHeading);
+            }
+        }
+
+    }
+}
+
+void RobotController::controlStartRotation(double rotation)
+{
+    if(rotation> 0)
+    {
+        //ldbg << "Robot Controller - ControlRotation: I rotate counter-clockwise!"<< endl;
+        sendWheelMessage(-WHEEL_SPEED, WHEEL_SPEED);
+    }
+    else
+    {
+        //ldbg << "Robot Controller - ControlRotation: I rotate clockwise!"<< endl;
+        sendWheelMessage(WHEEL_SPEED, -WHEEL_SPEED);
+    }
+    isNewMovement = FALSE;
+}
+
+void RobotController::handleRobotStall()
 {
     stopRobot(false);
-    //ldbg<<"Robot Controller - Pose counter: "<<constantPoseCounter<<endl;
-    //ldbg<<"Robot Controller - Speed change: "<<countSpeedChange<<endl;
-    isJustChanged = TRUE;
-    newAction = TRUE;
-    ldbg << "Robot controller: Restart exploration after rotation stall"<<endl;
-    countSpeedChange = 0;
+    isNewMovement = TRUE;
+    ldbg << "Robot Controller: Stop robot. Restart exploration after stall"<<endl;
     onRestartExploration();
 }
 
-void RobotController::controlRotationSetPointReached()
+void RobotController::controlEndRotation()
 {
-    ldbg << "Robot Controller - Control Rotation: set point reached!" << endl;
+    ldbg << "Robot Controller - Control Rotation: Set point reached!" << endl;
 
-    doMovement(0,0);
+    sendWheelMessage(0,0);
     emit sigChangeMovementType(S);
 
     delete normalActionQueue->dequeue();
 
     //Push the reached state into the states history
-    Pose* newPose = new Pose(actualState->getPose().getX(), actualState->getPose().getY(),
-                             actualState->getPose().getTheta());
-    RobotState* newState = new RobotState(*newPose, actualState->getTimestamp(),
-                                          actualState->getRightSpeed(), actualState->getLeftSpeed(), actualState->getBattery());
+    saveRobotState();
 
-
-    delete pastState;
-    pastState = newState;
-
-    isJustChanged = TRUE;
-    newAction = TRUE;
-    countSpeedChange = 0;
+    isNewMovement = TRUE;
     onStateUpdated();
 }
 
-void RobotController::controlRotationNegPos()
+void RobotController::controlLeftRotation(double lastHeading)
 {
-    if(actualState->getLeftSpeed() < 0)
+    if(lastHeading > 0)
     {
-        double leftSpeed = actualState->getLeftSpeed();
-        double rightSpeed = actualState->getRightSpeed();
-
-        if(((fabs(leftSpeed))>LOW_SPEED))
-            leftSpeed = leftSpeed*SPEED_DECR_FACTOR;
-        else
-            leftSpeed = -LOW_SPEED;
-        if(fabs(rightSpeed)>LOW_SPEED)
-            rightSpeed = rightSpeed*SPEED_DECR_FACTOR;
-        else
-            rightSpeed = LOW_SPEED;
-
-        doMovement(-leftSpeed, -rightSpeed);
-        ldbg << "Robot Controller - controlRotation: speed inverted (counter-clockwise)" << endl;
-        isSpeedChanged = TRUE;
-        countSpeedChange++;
+        ldbg<<"Control Rotation: continue rotate left"<<endl;
+        sendWheelMessage(-WHEEL_SPEED, WHEEL_SPEED);
     }
-}
-
-void RobotController::controlRotationPosPos(double distance)
-{
-    //PRM
-    if(actualState->getLeftSpeed() > 0)
-    {
-        isSpeedChanged = true;
-        countSpeedChange++;
-    }
-
-    if(distance < fromDegreeToRadiants(SPEED_LIMIT_ANGLE) || slowMotion){
-        doMovement(-LOW_SPEED, LOW_SPEED);
-    } else {
-        doMovement(-MED_SPEED, MED_SPEED);
-    }
-}
-
-void RobotController::controlRotationPosNeg()
-{
-    //In this case, i've made a rotation that is higher than what I need:
-    //I can send a command to change the direction, slowing down the speed
-    if(actualState->getLeftSpeed() > 0)
-    {
-
-        double leftSpeed=actualState->getLeftSpeed();
-        double rightSpeed=actualState->getRightSpeed();
-
-        if(((fabs(leftSpeed))>LOW_SPEED))
-            leftSpeed=leftSpeed*SPEED_DECR_FACTOR;
-        else
-            leftSpeed=LOW_SPEED;
-        if(fabs(rightSpeed)>LOW_SPEED)
-            rightSpeed=rightSpeed*SPEED_DECR_FACTOR;
-        else
-            rightSpeed=-LOW_SPEED;
-
-        doMovement(-leftSpeed, -rightSpeed);
-        ldbg << "Robot Controller - controlRotation: speed inverted (clockwise)" << endl;
-        isSpeedChanged = TRUE;
-        countSpeedChange++;
-    }
-}
-
-void RobotController::controlRotationNegNeg(double distance)
-{
-    if (actualState->getLeftSpeed() < 0)
-    {
-        isSpeedChanged = true;
-        countSpeedChange++;
-    }
-    if(fabs(distance) < fromDegreeToRadiants(SPEED_LIMIT_ANGLE) || slowMotion)
-        doMovement(LOW_SPEED, -LOW_SPEED);
-    else
-        doMovement(MED_SPEED, -MED_SPEED);
-}
-
-void RobotController::controlRotation(const Action &rotation) {
-    if(newAction)
-        controlRotationNewAction(rotation);
     else
     {
-        //In this case i have a rotation, but the robot is performing a rotation
-        //Check if i finish the desired rotation
-        ldbg << "Robot Controller - ControlRotation: Action value = " << fromRadiantToDegree(rotation.getValue()) << endl;
-        ldbg << "Robot Controller - controlRotation: Actual angle = " << fromRadiantToDegree(actualState->getPose().getTheta())<<endl;
-
-        double angleToReach = pastState->getPose().getTheta() + rotation.getValue();
-
-        ldbg << "Robot Controller - controlRotation: Real angle to reach = "<< fromRadiantToDegree(angleToReach) << endl;
-
-        angleToReach = wrapRad(angleToReach);
-
-        ldbg << "Robot Controller - controlRotation: Wrapped angle to reach = "<< fromRadiantToDegree(angleToReach) << endl;
-
-        double performedAngle =  actualState->getPose().getTheta();
-        double distance = fromRadiantToDegree(angularDistance(performedAngle, angleToReach));
-
-        ldbg << "Robot Controller - controlRotation: Angular distance = "<< distance <<endl;
-
-        if((fabs(distance) <= EMP_ANGLE_TOL && !isJustChanged) || constantPoseCounter >= STALL_LIMIT || countSpeedChange > STALL_LIMIT)
+        if (actualState->getLeftSpeed()<0)
         {
-            if(constantPoseCounter>=STALL_LIMIT || countSpeedChange > STALL_LIMIT)
-            {
-                ldbg<<"Robot Controller - Robot can't move, restart!!!"<<endl;
-                controlRotationRobotStall();
-                return;
-            }
-            //ldbg<<"Robot Controller - Pose counter: "<<constantPoseCounter<<endl;
-            controlRotationSetPointReached();
-
+            ldbg<<"Control Rotation: invert rotation(left to right)"<<endl;
+            sendWheelMessage(WHEEL_SPEED, -WHEEL_SPEED);
         }
-        else if(distance < 0 && rotation.getValue() > 0 && !isJustChanged)
-            controlRotationNegPos();
-        else if (distance > 0 && rotation.getValue() > 0 && !isJustChanged)
-            controlRotationPosPos(distance);
-        else if(distance > 0 && rotation.getValue() < 0 && !isJustChanged)
-            controlRotationPosNeg();
-        else if (distance < 0 && rotation.getValue() < 0 && !isJustChanged)
-            controlRotationNegNeg(distance);
+        else
+        {
+            ldbg <<"Control Rotation: Already rotate right. No invert"<<endl;
+        }
     }
 }
 
-void RobotController::controlTraslationNewAction(const Action &traslation)
+void RobotController::controlRightRotation(double lastHeading)
 {
-    constantPoseCounter = 0;
+    if(lastHeading < 0)
+    {
+        ldbg<<"Control Rotation: continue rotate right"<<endl;
+        sendWheelMessage(WHEEL_SPEED, -WHEEL_SPEED);
+    }
+    else
+    {
+        if (actualState->getLeftSpeed()>0)
+        {
+            ldbg<<"Control Rotation: invert rotation(right to left)"<<endl;
+            sendWheelMessage(-WHEEL_SPEED, WHEEL_SPEED);
+        }
+        else
+        {
+            ldbg <<"Control Rotation: Already rotate left. No invert"<<endl;
+        }
+    }
+}
 
+void RobotController::controlTranslation(const Action &traslation)
+{
+    if(isNewMovement)
+        controlStartTranslation(traslation);
+    else if (previousX != actualState->getPose().getX() && previousY != actualState->getPose().getY())
+    {
+        previousX = actualState->getPose().getX();
+        previousY = actualState->getPose().getY();
+        //It is already moving forward
+        double distToCover = traslation.getValue();
+        double distCoveredSquare = pow(actualState->getPose().getX()- pastState->getPose().getX(), 2) +
+                pow(actualState->getPose().getY()-pastState->getPose().getY(), 2);
+        double distCovered = 0;
+        if(distToCover > 0)
+            distCovered = sqrt(distCoveredSquare);
+        else
+            distCovered = -sqrt(distCoveredSquare);
+
+        double distanceDelta = distToCover - distCovered;
+
+
+
+        if(abs(distanceDelta)<= TRASL_TOL)
+        {
+            ldbg<<"RobotController - Control Traslation: I covered " << distCovered <<". Set point reached!"<<endl;
+            controlEndTranslation();
+        }
+        else if (distanceDelta  < -TRASL_TOL)
+        {
+            controlTraslationTooFar();
+        }
+        else if(distanceDelta > TRASL_TOL)
+        {
+            controlTraslationTooBack();
+        }
+    }
+}
+
+void RobotController::controlStartTranslation(const Action &traslation)
+{
     if(traslation.getValue()>0)
     {
         ldbg << "Robot Controller - controlTranslation: Go straight of: "<< traslation.getValue()<<endl;
-        if(traslation.getValue() <= LOW_SPEED_LIMIT_TRASL)
-            doMovement(MED_SPEED, MED_SPEED);
-        else
-            doMovement(HIGH_SPEED, HIGH_SPEED);
+        sendWheelMessage(MED_SPEED, MED_SPEED);
     }
     else
     {
         ldbg << "Robot Controller - controlTranslation: Go back of: "<< traslation.getValue()<<endl;
-        if(traslation.getValue() >= -LOW_SPEED_LIMIT_TRASL)
-            doMovement(-MED_SPEED, -MED_SPEED);
-        else
-            doMovement(-HIGH_SPEED, -HIGH_SPEED);
+        sendWheelMessage(-MED_SPEED, -MED_SPEED);
     }
-    isSpeedChanged = FALSE;
-    newAction = FALSE;
+
+    isNewMovement = FALSE;
 }
 
-void RobotController::controlTraslationSetPointReached()
+void RobotController::controlEndTranslation()
 {
 
-    doMovement(0.0,0.0);
+    sendWheelMessage(0,0);
     emit sigChangeMovementType(S);
 
     delete normalActionQueue->dequeue();
 
     //Push the reached state into the states history
-    Pose* newPose = new Pose(actualState->getPose().getX(), actualState->getPose().getY(),
-                             actualState->getPose().getTheta());
-    RobotState* newState = new RobotState(*newPose, actualState->getTimestamp(),
-                                          actualState->getRightSpeed(), actualState->getLeftSpeed(), actualState->getBattery());
+    saveRobotState();
 
-    delete pastState;
-    pastState = newState;
-
-    isJustChanged = TRUE;
-    newAction = TRUE;
+    isNewMovement = TRUE;
     onStateUpdated();
 }
 
 void RobotController::controlTraslationTooFar()
 {
-    //I go backward, reducing the speed
-    //PRM
     double leftSpeed=actualState->getLeftSpeed();
     double rightSpeed=actualState->getRightSpeed();
 
@@ -968,13 +878,11 @@ void RobotController::controlTraslationTooFar()
     else
         rightSpeed = MED_SPEED;
 
-    doMovement(-leftSpeed, -rightSpeed);
-    isSpeedChanged = TRUE;
+    sendWheelMessage(-leftSpeed, -rightSpeed);
 }
 
 void RobotController::controlTraslationTooBack()
 {
-    //PRM
     double leftSpeed=actualState->getLeftSpeed();
     double rightSpeed=actualState->getRightSpeed();
 
@@ -987,59 +895,22 @@ void RobotController::controlTraslationTooBack()
     else
         rightSpeed=MED_SPEED;
 
-    doMovement(leftSpeed, rightSpeed);
-    isSpeedChanged = FALSE;
-}
-
-void RobotController::controlTranslation(const Action &traslation)
-{
-    if(newAction)
-        controlTraslationNewAction(traslation);
-    else
-    {
-        //It is already moving forward
-        double distToCover = traslation.getValue();
-        double distCoveredSquare = pow(actualState->getPose().getX()- pastState->getPose().getX(), 2) +
-                pow(actualState->getPose().getY()-pastState->getPose().getY(), 2);
-        double distCovered = 0;
-        if(distToCover > 0)
-            distCovered = sqrt(distCoveredSquare);
-        else
-            distCovered = -sqrt(distCoveredSquare);
-
-        ldbg<<"RobotController - controlTraslation: I covered " << distCovered <<". I must cover : " << distToCover - distCovered << endl;
-
-        if(((distToCover - distCovered <= TRASL_TOL && distToCover - distCovered >= -TRASL_TOL) && isJustChanged==FALSE) || constantPoseCounter >= 10)
-        {
-            ldbg<<"RobotController - controlTraslation: Set point reached!"<<endl;
-            controlTraslationSetPointReached();
-        }
-        else if (distToCover - distCovered < -TRASL_TOL && !isSpeedChanged)
-        {
-            ldbg <<"RobotController - controlTranslation: I'm going too far' !"<<endl;
-            controlTraslationTooFar();
-        }
-        else if(distToCover - distCovered > TRASL_TOL  && !isSpeedChanged)
-        {
-            ldbg <<"RobotController - controlTranslation: continue movement."<<endl;
-            controlTraslationTooBack();
-        }
-    }
+    sendWheelMessage(leftSpeed, rightSpeed);
 }
 
 void RobotController::onRecomputePath(const Data::Pose &actualFrontier)
 {
-    moveRobot(0,1,0);
+    ldbg<<"Robot controller: Recompute path. Move 0.3"<<endl;
+    moveRobot(0,0.3,0);
     emit sigRecomputePathRCM(actualFrontier);
     emit sigChangeStatePathPlanningRCM(true);
 }
 
 void RobotController::onRestartExploration()
 {
-    //ldbg << "Robot Controller - onRestartExploration: userEnabled? " << userEnabled << endl;
-    if(userEnabled)
+    if(isExplorationEnabled && isPathPlannerEnabled)
     {
-        ldbg <<"Robot Controller: restart Exploration"<<endl;
+        ldbg <<"Robot Controller: Restart exploration"<<endl;
         emit sigChangeStateExplorationRCM(true);
         emit sigChangeStatePathPlanningRCM(true);
     }
@@ -1051,6 +922,7 @@ void RobotController::onObstacleStart()
     {
         frontierTime.restart();
         obstacleAvoidanceTimer->start(TIMEOUT_MSEC);
+        ldbg << "Robot controller: Obstacle start."<<endl;
     }
 }
 
@@ -1076,20 +948,20 @@ void RobotController::onFrontierReached()
 
 void RobotController::onHandleBadFrontierRCM(Data::Pose pose)
 {
-    if (tryposeCounter < 3 && actualFrontier->getX() == pose.getX() && actualFrontier->getY() == pose.getY())
-    {
-        tryposeCounter++;
-        emit sigCleanBadFrontierRCM();
-    }
-    else
+    if (actualFrontier->getX() == pose.getX() && actualFrontier->getY() == pose.getY())
     {
         emit sigHandleBadFrontierRCM(pose);
-        tryposeCounter = 0;
     }
+
     controlRobotType = NORMAL;
     sonarStatus = ON;
-    double angle2 = computeRotationFromPoses(actualState->getPose(), pose);
-    moveRobot(fromRadiantToDegree(angle2),1,0);
+    double rotation = fromRadiantToDegree(computeRotationFromPoses(actualState->getPose(), pose));
+    if (rotation>0 && rotation<EMP_ANGLE_TOL)
+        rotation+=EMP_ANGLE_TOL;
+    else if (rotation<0 && rotation>-EMP_ANGLE_TOL)
+        rotation-=EMP_ANGLE_TOL;
+
+    moveRobot(rotation,1,0);
 }
 
 void RobotController::onNoFrontierAvailableRCM()
@@ -1107,7 +979,8 @@ void RobotController::setSlamModule(SLAM::SLAMModule *slam)
 
 void RobotController::setStatus(bool status)
 {
-    this->userEnabled = status;
+    isPathPlannerEnabled = status;
+    isExplorationEnabled = status;
     if(status){
         //ldbg << "Robot Controller - setStatus: enabling things..." << endl;
         emit sigChangeStateExplorationRCM(true);
@@ -1153,4 +1026,26 @@ void RobotController::setControlType(int type)
 {
     this->controlRobotType = (controlTypeEnum)type;
 }
+
+RobotState * RobotController::getActualState()
+{
+    return actualState;
+}
+
+void RobotController::updatePose(const Pose &pose)
+{
+    previousPose = actualState->getPose();
+    actualState->setPose(pose);
+}
+
+void RobotController::setStreamImageFlag(bool stream)
+{
+    streamMutex->lock();
+    streamImage = stream;
+    streamMutex->unlock();
+}
+
+
+
+
 

@@ -31,6 +31,8 @@
 #define DWA_MAX_VELOCITY Config::OBS::dwa_max_velocity
 #define DWA_STEP Config::OBS::dwa_step
 #define DWA_TIME Config::OBS::dwa_time
+#define DWA_ROTATION_THRESHOLD Config::OBS::dwa_rotation_threshold
+#define DWA_TRANSLATION_THRESHOLD Config::OBS::dwa_translation_threshold
 #define DWA_ROTATION_SAFETY Config::OBS::dwa_rotation_safety
 #define DWA_TRANSLATION_SAFETY Config::OBS::dwa_translation_safety
 #define DWA_SIGMA Config::OBS::dwa_sigma
@@ -52,6 +54,8 @@ public:
         double x;
         double y;
         double globalDistance;
+        double rightSpeed;
+        double leftSpeed;
     };
 
 
@@ -78,7 +82,7 @@ public:
     void handleEmpiricLeftLaser();
     void handleEmpiricLeftSonar(const Data::SonarData &sonar);
     void handleMetrics();
-    void calcLocalFrontier(Data::Pose *actualFrontier);
+    Data::Pose calcLocalFrontier(Data::Pose actualFrontier, Data::Pose centerPose);
 signals:
 
     void sigChangeActionStartTimestamp(int);
@@ -115,7 +119,7 @@ private:
 
 
     movementStateEnum actualMovement;
-    sensorDataEnum previousRotation, sensorDataCaptured;
+    sensorDataEnum previousRotation;
     obstacleAlgEnum algorithmType;
 
     Data::RobotState *actualState,*pastState;
@@ -130,8 +134,7 @@ private:
     SLAM::SLAMModule *slam;
 
 
-    QList<LocalMapEl> searchSpacePoses;
-    QList<QPair<double,double> > searchSpaceVelocities;
+    QList<LocalMapEl> searchSpace;
 
     int num_input;
     int num_output;
@@ -147,16 +150,14 @@ private:
     QList<bool> isLaserObstacle;
     QList<double> laserReadings;
     bool isLaserFrontObstacle, isLaserBackObstacle, isLaserRightObstacle, isLaserLeftObstacle, isLaserObstacleDWA;
-    bool isLaser;
+    bool haveNewLaserData;
 
-    double angleLaserDistance,northLaserDistance, northWestLaserDistance, northEastLaserDistance, eastLaserDistance, westLaserDistance;
-    double actualDistance;
+    double northLaserDistance, northWestLaserDistance, northEastLaserDistance, eastLaserDistance, westLaserDistance;
     bool safePose;
-    double actualPoseGlobalRot;
+
     double bestLeftSpeed;
     double bestRightSpeed;
     double bestDistance;
-
     double bestX;
     double bestY;
     double bestTheta;

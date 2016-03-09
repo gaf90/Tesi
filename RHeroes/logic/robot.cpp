@@ -348,7 +348,7 @@ void Robot::handleModuleActivationMessage(const BuddyMessage *buddy)
 
     if (moduleName.compare("exploration") == 0)
     {
-        robotController->explorationModuleState = moduleStatus;
+        robotController->isExplorationEnabled = moduleStatus;
 
         if (moduleStatus)
             robotController->sonarStatus = 0;
@@ -487,7 +487,7 @@ void Robot::onUpdateSignalStrength(QString strength)
         robotController->obstacleAvoidance->empiricBehaviorStatus =0;
         robotController->sonarStatus = 1;
         robotController->stopRobot(true);
-        robotController->explorationModuleState = false;
+        robotController->isExplorationEnabled = false;
         robotController->setStatus(false);
     }
 

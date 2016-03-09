@@ -32,7 +32,8 @@
 #define TIMEOUT_MSEC  Config::OBS::obstacle_timeout
 
 #define TRASL_TOL 0.1
-#define SPEED_LIMIT_ANGLE 100
+#define STALL_NUMBER 25
+#define WHEEL_SPEED 0.3
 
 #define UPDATE_STATUS true
 
@@ -72,43 +73,22 @@ public:
 
     void handleWheelMotionMessage(const Data::BuddyMessage *buddy);
     void onStateUpdatedHybrid(bool isIdle);
-    void onStateUpdatedHybrid();
-    void onStateUpdatedNormal(bool isIdle);
-    void controlRotationNewAction(const Data::Action &todo);
-    void controlRotationNearToSetPoint(double distance);
-    void controlRotationRobotStall();
-    void controlRotationSetPointReached();
-    void controlRotationNegPos();
-    void controlRotationPosPos(double distance);
-    void controlRotationPosNeg();
-    void controlRotationNegNeg(double distance);
-    void controlTraslationNewAction(const Data::Action &todo);
-    void controlTraslationSetPointReached();
+    void onStateUpdatedNormal();
+    void handleRobotStall();
+    void controlStartRotation(double rotation);
+    void controlEndRotation();
+    void controlLeftRotation(double lastHeading);
+    void controlRightRotation(double lastHeading);
+    void controlStartTranslation(const Data::Action &todo);
+    void controlEndTranslation();
     void controlTraslationNearSetPoint(double distToCover, double distCovered);
     void controlTraslationTooFar();
     void controlTraslationTooBack();
     void controlTraslationStall(double distCovered, const Data::Action &todo, double distToCover);
+
 private:
    //=== Movement Helper ===//
 
-   /**
-    * Fake method for the OpenLoop. It is not implemented.
-    */
-   void openLoopMovement(double angle1, double translation, double angle2);
-   /**
-    * This method close the loop, using the odometry sensors data.
-    * @param angle1 how many degrees the robot must rotate for the initial rotation.
-    * @param translation how many metres the robot must translate.
-    * @param angle2 how many degrees the robot must rotate for the last rotation.
-    */
-   void odometryClosedLoop(double angle1, double translation, double angle2);
-
-   //=== Control Methods ===//
-   /**
-    * This method is invoked to control the rotation in order to stop
-    * it if the robot has reached the set point.
-    * @param the action that is the rotation that must be controlled.
-    */
    void controlRotation(const Data::Action &todo);
    /**
     * This method is invoked to control the translation in order to stop
@@ -116,29 +96,6 @@ private:
     * @param the action that is the translation that must be controlled.
     */
    void controlTranslation(const Data::Action &todo);
-
-   /**
-     * This routine takes the x, y, t values of the new poses
-     * and checks if the values are almost the same of the old pose.
-     * If yes and if there are not action in the queue, it means that
-     * the robot is Idle.
-     * @param comp_x the x component of the pose
-     * @param comp_y the y component of the pose
-     * @param comp_t the theta component of the pose
-     */
-   void checkIfIdle(double comp_x, double comp_y, double comp_t, double timestamp);
-
-   /**
-    * This routine takes the x, y, t values of the new poses
-    * and checks if the values are almost the same of the old pose.
-    * If yes and if the wheels are moving, then the robot is stalling.
-    * @param comp_x the x component of the pose
-    * @param comp_y the y component of the pose
-    * @param comp_t the theta component of the pose
-    */
-  void checkIfStall(double comp_x, double comp_y, double comp_t);
-
-  void checkAround(const Data::Pose &pose);
 
    //=== Sensor Data Handler ===//
 
@@ -220,8 +177,6 @@ public slots:
 
     void onFrontierToReachRCM(const Data::Pose pose);
 
-    void insertActionToPerform(Data::Action::ActionType type, double value);
-
     void onPerformActionRCM(PathPlanner::AbstractAction *action);
 
     void onNoFrontierAvailableRCM();
@@ -236,7 +191,7 @@ public slots:
     void setLastSonarData(Data::SonarData sonar);
     void stopRobot(bool saveState);
     void moveRobot(double angle1, double translation, double angle2);
-    void doMovement(double leftSpeed, double rightSpeed);
+    void sendWheelMessage(double leftSpeed, double rightSpeed);
 
 private slots:
 
@@ -261,25 +216,23 @@ private:
     int sonarStatus;
     statusEnum teleoperationStatus;
     enum robotAroundEnum{NEAR_TO_POSE,FAR_TO_POSE};
-    robotAroundEnum robotAround;
+    robotAroundEnum robotPoseCheck;
 
 
-    bool explorationModuleState;
-    bool newAction, isSpeedChanged, isJustChanged;
+    bool isExplorationEnabled;
+    bool isPathPlannerEnabled;
+    bool isNewMovement;
     bool streamImage;
     bool isNotificationNeeded, haveReceivedWaypoint;
-    bool userEnabled;
-    bool slowMotion;
 
     uint robotId;
 
-    int lastBatterySent;
-    int sonarObstacleTimeNumber;
+    int previousBattery;
+    double previousHeading;
+    double previousX;
+    double previousY;
     int waitTime;
-    int constantPoseCounter, stallCounter;
-    int counterAround, countSpeedChange;
-    int refindPathCounter;
-    int tryposeCounter;
+    int stallCounter;
 
     double actionStartTimestamp;
 

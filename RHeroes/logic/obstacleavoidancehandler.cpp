@@ -40,7 +40,7 @@ ObstacleAvoidance::ObstacleAvoidance(InverseKinematic *inverseKinematic, int ang
         handleNeuralNetwork();
     }
 
-    isLaser = false;
+    haveNewLaserData = false;
     bestPose = Pose(0,0,0);
     previousActualPose = Pose(0,0,0);
     meters = 0;
@@ -95,7 +95,6 @@ void ObstacleAvoidance::setSlamModule(SLAM::SLAMModule *slam)
 
 void ObstacleAvoidance::setMovementType(int type)
 {
-    this->sensorDataCaptured = (sensorDataEnum)type;
     this->previousRotation = (sensorDataEnum) type;
 }
 
@@ -104,40 +103,41 @@ void ObstacleAvoidance::handleMetrics()
     double isMovingDistance = previousActualPose.getDistance(actualPose);;
     if (isMovingDistance>0.01)
     {
-        ldbg <<"Obstacle Metric: ActualMovement is  "<<actualMovementString[actualMovement] << ". Actual Pose is" << actualPose <<". Past pose is " << pastState->getPose() <<endl;
-        ldbg << "Actual frontier is "<<*actualFrontier << ". Local is " << localFrontier<< endl;
+        //ldbg <<"Obstacle Metric: ActualMovement is  "<<actualMovementString[actualMovement] << ". Actual Pose is" << actualPose <<". Past pose is " << pastState->getPose() <<endl;
+        //ldbg << "Actual Pose " << actualPose << "Actual frontier is "<<*actualFrontier;
 
         double deltaSpace = actualPose.getDistance(pastState->getPose());
         meters+= deltaSpace;
-        ldbg <<"Obstacle Metric: Delta space is "<< deltaSpace << ". Total meters is "<<meters;
+        //ldbg <<"Obstacle Metric: Delta space is "<< deltaSpace << ". Total meters is "<<meters;
 
         double distance = actualPose.getDistance(*actualFrontier);
-        ldbg <<". Frontier distance is " << distance << endl;
+        //ldbg <<". Frontier distance is " << distance << endl;
 
-        if (distance<0.2)
+        if (distance<0.6)
         {
-            ldbg << "Obstacle Metric: Reached frontier."<<endl;
+            ldbg << "Obstacle Metric: Reached frontier after "<< meters<< " meters " << endl;
             meters = 0;
             emit sigFrontierReached();
+            emit sigStopRobot(true);
 
         }
     }
 }
 
-void ObstacleAvoidance::calcLocalFrontier(Data::Pose *actualFrontier)
+Data::Pose ObstacleAvoidance::calcLocalFrontier(Data::Pose actualFrontier, Data::Pose centerPose)
 {
-    double fx = actualFrontier->getX()-actualPose.getX();
-    double fy = actualFrontier->getY()-actualPose.getY();
-    double rotationAngle = -actualPose.getTheta();
+    double fx = actualFrontier.getX()-centerPose.getX();
+    double fy = actualFrontier.getY()-centerPose.getY();
+    double rotationAngle = -centerPose.getTheta();
 
     double fxRot = fx*cos(rotationAngle)-fy*sin(rotationAngle);
     double fyRot = fx*sin(rotationAngle)+fy*cos(rotationAngle);
     double fThetaRot = atan2(fyRot,fxRot);
 
     Pose localFrontier(fxRot, fyRot, fThetaRot);
-    this->localFrontier = localFrontier;
-    this->frontierAngle = fromRadiantToDegree(fThetaRot);
-    ldbg<<"Obstacle Metrics: Frontier angle is " << frontierAngle<<endl;
+    this->frontierAngle = fromRadiantToDegree(fThetaRot) - 90;
+    //ldbg<<"Obstacle Metrics: Frontier angle is " << frontierAngle<<endl;
+    return localFrontier;
 }
 
 void ObstacleAvoidance::handleObstacle(const Data::SonarData &sonar, Data::RobotState *pastState, Data::RobotState *actualState,const Data::Action*actualAction, Data::Pose*actualFrontier)
@@ -155,7 +155,7 @@ void ObstacleAvoidance::handleObstacle(const Data::SonarData &sonar, Data::Robot
     checkSonarData(sonar);
     //ldbg << "New sonar coming at "<< QTime::currentTime().toString()<<endl;
 
-    calcLocalFrontier(actualFrontier);
+    this->localFrontier = calcLocalFrontier(*actualFrontier, actualPose);
 
     emit sigHandleTimer();
     emit sigUpdateSonarData(sonar);
@@ -183,7 +183,7 @@ void ObstacleAvoidance::checkSonarData(const Data::SonarData &sonar)
 
 void ObstacleAvoidance::checkLaserData(double threshold)
 {
-    if (isLaser)
+    if (haveNewLaserData)
     {
         isLaserObstacle.clear();
         int angle = 0;
@@ -204,7 +204,7 @@ void ObstacleAvoidance::checkLaserData(double threshold)
         northEastLaserDistance = laserReadings.at(40);
         eastLaserDistance = laserReadings.at(10);
 
-        isLaser = false;
+        haveNewLaserData = false;
     }
 }
 
@@ -751,7 +751,7 @@ void ObstacleAvoidance::handleEmpiricLeftLaser()
             ldbg << "Case LL_SL: Rotate right max"<<endl;
             previousRotation = R;
             empiricBehaviorStatus = EXEC_R;
-            emit sigMoveRobot(EMP_ROTATELEFT_MAX, EMP_GO_STRAIGHT,0);
+            emit sigMoveRobot(EMP_ROTATERIGHT_MAX, EMP_GO_STRAIGHT,0);
         }
         else
         {
@@ -788,9 +788,9 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
 
     isLaserObstacleDWA = false;
 
-    if (isLaser)
+    if (haveNewLaserData)
     {
-        isLaser = false;
+        haveNewLaserData = false;
         isLaserObstacleDWA = checkLaserDataRange(0,360,LASER_THRESHOLD);
     }
 
@@ -800,13 +800,14 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
 
         if (dwaBehaviorStatus == DEACTIVATED)
         {
+            ldbg <<"DWA: Stop robot"<<endl;
             emit sigStopRobot(true);
             emit sigHandleTimer();
             dwaBehaviorStatus = FIRSTTIME;
             // ldbg << QTime::currentTime().toString()<<": DEACTIVATED to FIRSTIME (Inner)"<< endl;
         }
 
-        if (dwaBehaviorStatus > DEACTIVATED)
+        if (dwaBehaviorStatus == FIRSTTIME || isSonarFrontObstacle || isSonarLeftObstacle || isSonarRightObstacle || isSonarBackObstacle)
         {
             emit sigUpdateSonarData(sonar);
 
@@ -817,12 +818,12 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
 
             int bestValue = calculateBestVelocity();
 
-            bestLeftSpeed = searchSpaceVelocities[bestValue].first;
-            bestRightSpeed = searchSpaceVelocities[bestValue].second;
+            bestRightSpeed = searchSpace[bestValue].rightSpeed;
+            bestLeftSpeed = searchSpace[bestValue].leftSpeed;
 
-            bestX = searchSpacePoses[bestValue].x + actualPose.getX();
-            bestY = searchSpacePoses[bestValue].y + actualPose.getY();
-            bestTheta = searchSpacePoses[bestValue].localHeading + actualPose.getTheta();
+            bestX = searchSpace[bestValue].x + actualPose.getX();
+            bestY = searchSpace[bestValue].y + actualPose.getY();
+            bestTheta = searchSpace[bestValue].localHeading + actualPose.getTheta();
 
             bestPose = Pose(bestX, bestY, bestTheta);
 
@@ -837,15 +838,24 @@ void ObstacleAvoidance::handleDynamicWindowSonarData(const Data::SonarData &sona
     else
     {
         bestDistance =  actualPose.getDistance(bestPose);
-        int bestRotation =  fromRadiantToDegree(computeRotationFromPoses(actualPose,bestPose));
-        //ldbg <<"DWA: (" << bestDistance <<"," <<bestRotation<<")" << endl;
-        if (dwaBehaviorStatus > DEACTIVATED && bestDistance<0.3 && (bestRotation>-EMP_ANGLE_TOL || bestRotation<EMP_ANGLE_TOL))
+        double bestRotation = fromRadiantToDegree(bestTheta-actualPose.getTheta());
+        if (dwaBehaviorStatus > DEACTIVATED)
         {
+            double ls = actualState->getLeftSpeed();
+            double rs = actualState->getRightSpeed();
+            Pose predictedBestPose = forwardKinematics(actualPose,rs,ls,0.2);
 
-            dwaBehaviorStatus = DEACTIVATED;
-            //ldbg <<"DWA: Restart exploration."<< endl;
-            emit sigRecomputePath(*actualFrontier);
+            ldbg <<" "<<endl;
+            ldbg <<"DWA: AP = ("<<actualPose.getX()<< "," <<actualPose.getY()<<","<<fromRadiantToDegree(actualPose.getTheta())<<"), LS = "<<actualState->getLeftSpeed()<<", RS = "<< actualState->getRightSpeed()<<endl;
+            ldbg <<"DWA: BP = ("<<bestPose.getX()<< "," <<bestPose.getY()<<","<<fromRadiantToDegree(bestPose.getTheta())<<"), (PBP ("<<predictedBestPose.getX()<< "," <<predictedBestPose.getY()<<","<<fromRadiantToDegree(predictedBestPose.getTheta())<<
+                   ") BD = " << bestDistance <<", BR = " << bestRotation << endl;
 
+            if (bestDistance<DWA_TRANSLATION_THRESHOLD && bestRotation <DWA_ROTATION_THRESHOLD && bestRotation>-DWA_ROTATION_THRESHOLD)
+            {
+                dwaBehaviorStatus = DEACTIVATED;
+                ldbg <<"DWA: Restart DWA."<< endl;
+                emit sigRecomputePath(*actualFrontier);
+            }
         }
     }
 }
@@ -867,7 +877,7 @@ bool ObstacleAvoidance::checkLaserDataRange(int angleMin, int angleMax, double t
         for (int i = angleMin; i < angleMax;i++)
         {
             double actualDistance = laserReadings.at(i);
-            //ldbg << "DWA - Laser capture: ("<< i << " " << actualDistance << ")"<< endl;
+            // ldbg << "DWA - Laser capture: ("<< i << " " << actualDistance << ")"<< endl;
 
         }
     }
@@ -887,8 +897,8 @@ bool ObstacleAvoidance::checkSafePose(int laserID, LocalMapEl actualSample)
         if (safeLaser>=360)
             fixAngle = safeLaser - 360;
 
-        angleLaserDistance = laserReadings.at(fixAngle);
-        actualDistance = actualSample.globalDistance;
+        double angleLaserDistance = laserReadings.at(fixAngle);
+        double actualDistance = actualSample.globalDistance;
 
         //ldbg<<"DWA - Safe pose: ("<< fixAngle << " " << actualDistance <<" "<< laserDistance<< ")"<<endl;
         if (actualDistance + DWA_TRANSLATION_SAFETY> angleLaserDistance)
@@ -900,8 +910,7 @@ bool ObstacleAvoidance::checkSafePose(int laserID, LocalMapEl actualSample)
 
 void ObstacleAvoidance::calculateSearchSpace()
 {
-    searchSpacePoses.clear();
-    searchSpaceVelocities.clear();
+    searchSpace.clear();
 
     QTime t;
     t.start();
@@ -924,15 +933,17 @@ void ObstacleAvoidance::calculateSearchSpace()
             actualSample.globalHeading = actualSample.localHeading + actualPose.getTheta();
             actualSample.globalAngle = atan2(predictedPose.getY() + actualPose.getY(), predictedPose.getX() + actualPose.getX());
             actualSample.globalDistance = predictedPose.getDistance(Pose(0,0,0));
+            actualSample.rightSpeed = i;
+            actualSample.leftSpeed = j;
 
             int laserID = fromRadiantToDegree(actualSample.localAngle);
             if (laserID<0)
                 laserID+=360;
 
 
-            //ldbg << "DWA - Search space: "<< laserID<<" ("<<i <<", "<< j<<
+            //  ldbg << "DWA - Search space: "<< laserID<<" ("<<i <<", "<< j<<
             //      ") "<< actualPose << ", " << "{" << actualSample.x + actualPose.getX()<< ","<<actualSample.y + actualPose.getY()<<
-            //    ","<<actualSample.globalHeading <<","<<actualSample.globalAngle <<","<<actualSample.localHeading<<","<<actualSample.localAngle <<","<<actualSample.globalDistance<<"}";
+            //  ","<<actualSample.globalHeading <<","<<actualSample.globalAngle <<","<<actualSample.localHeading<<","<<actualSample.localAngle <<","<<actualSample.globalDistance<<"}";
 
             safePose = checkSafePose(laserID, actualSample);
 
@@ -941,9 +952,7 @@ void ObstacleAvoidance::calculateSearchSpace()
             if (safePose)
             {
                 //ldbg << QTime::currentTime().toString()<<": Safe pose. Append velocities "<< i << ", " << j <<endl;
-                QPair<double,double> velocity(i,j);
-                searchSpaceVelocities.append(velocity);
-                searchSpacePoses.append(actualSample);
+                searchSpace.append(actualSample);
             }
 
         }
@@ -956,6 +965,9 @@ int ObstacleAvoidance::calculateBestVelocity()
     double velocity= 0;
     double targetHeading = 0;
     double clearance = 0;
+    double targetHeadingNorm = 0;
+    double clearanceNorm = 0;
+    double velocityNorm  =0;
     int bestValue = 0;
     double bestCost = 10;
 
@@ -964,65 +976,63 @@ int ObstacleAvoidance::calculateBestVelocity()
     QTime t;
     t.start();
 
-    //ldbg << "DWA - Actual frontier (pre translate):"<<actualPose <<" , "<< actualFrontier <<endl;
-    double fx = actualFrontier->getX()-actualPose.getX();
-    double fy = actualFrontier->getY()-actualPose.getY();
-    double rotationAngle = -actualPose.getTheta();
-
-    double fxRot = fx*cos(rotationAngle)-fy*sin(rotationAngle);
-    double fyRot = fx*sin(rotationAngle)+fy*cos(rotationAngle);
-    double fThetaRot = atan2(fyRot,fxRot);
-
-    Pose actualFrontierDWA(fxRot,fyRot,fThetaRot);
-
 
     //ldbg << QTime::currentTime().toString()<<": Search space size = " << searchSpaceVelocities.size() << ", Search poses size = " << searchSpacePoses.size() <<
     //     ", Obstacle size = " << laserReadings.size() << endl;
 
     //ldbg <<"DWA - Actual pose local rotation is "<< wrapDeg(fromRadiantToDegree(actualPose.getTheta()))<<", global rotation is "<<wrapDeg(fromRadiantToDegree(actualPoseGlobalRot)) << endl;
-    ldbg <<"DWA - Actual frontier: " << actualFrontierDWA<<endl;
+    ldbg <<"DWA - Actual frontier: (" << localFrontier.getX()<<","<<localFrontier.getY()<<","<<fromRadiantToDegree(localFrontier.getTheta())<<")"<<endl;
 
-    if (searchSpaceVelocities.size()<0)
+    if (searchSpace.size()<0)
         return 0;
 
-    for(int counter = 0; counter < searchSpaceVelocities.size(); counter++)
+    for(int counter = 0; counter < searchSpace.size(); counter++)
     {
-        Pose predictedPose (searchSpacePoses.at(counter).x, searchSpacePoses.at(counter).y, searchSpacePoses.at(counter).localHeading);
+        Pose predictedPose(searchSpace.at(counter).x, searchSpace.at(counter).y,searchSpace.at(counter).localHeading);
 
-        int laserID = fromRadiantToDegree(searchSpacePoses.at(counter).localAngle);
+        int laserID = fromRadiantToDegree(searchSpace.at(counter).localAngle);
 
         if (laserID<0)
             laserID+=360;
 
         double obstacleDistance = laserReadings.at(laserID);
-        double predictedPoseDistance = searchSpacePoses.at(counter).globalDistance;
+        double predictedPoseDistance = searchSpace.at(counter).globalDistance;
 
         clearance = obstacleDistance - predictedPoseDistance;
-        targetHeading = computeRotationFromPoses(predictedPose,actualFrontierDWA);
-        velocity = (searchSpaceVelocities.at(counter).first + searchSpaceVelocities.at(counter).second)/2;
-
-        //ldbg <<"DWA - parameters (real): "<< predictedPose << " ("<< counter << " " << targetHeading << " " << clearance << " " << velocity <<")";
-
-        double t = abs(targetHeading)/2*M_PI;
-        double c = predictedPoseDistance/obstacleDistance;
-        double v = 1-velocity;
-
-        //ldbg <<"DWA - parameters (normalized): ("<< counter << " " << t << " " << c<< " " << v <<")";
-
-        double cost = DWA_SIGMA*(DWA_ALPHA*t + DWA_BETA*c + DWA_GAMMA*v);
-        //ldbg << " -> " << cost << endl;
-        if (cost<=bestCost)
+        if (clearance<DWA_TRANSLATION_SAFETY)
         {
-            bestCost = cost;
-            bestValue = counter;
+            ldbg <<"Error: Pose too close"<<endl;
+        }
+        else
+        {
+            Pose predictedFrontier = calcLocalFrontier(localFrontier,predictedPose);
+            targetHeading = fromRadiantToDegree(predictedFrontier.getTheta())- 90;
+
+            velocity = (searchSpace.at(counter).leftSpeed + searchSpace.at(counter).rightSpeed)/2;
+
+            // ldbg <<"DWA - parameters (real): "<< predictedPose << " "<< predictedFrontier << " ("<< laserID << " " << targetHeading << " " << clearance << " " << velocity <<")";
+
+            targetHeadingNorm = abs(targetHeading)/360;
+            clearanceNorm = 1 - (clearance/obstacleDistance);
+            velocityNorm = 1 - abs(velocity);
+
+            //ldbg <<"DWA - parameters (normalized): ("<< counter << " " << t << " " << c<< " " << v <<")";
+
+            double cost = DWA_SIGMA*(DWA_ALPHA*targetHeadingNorm + DWA_BETA*clearanceNorm + DWA_GAMMA*velocityNorm);
+            //ldbg << " -> " << cost << endl;
+            if (cost<=bestCost)
+            {
+                bestCost = cost;
+                bestValue = counter;
+            }
         }
     }
 
 
     //ldbg <<QTime::currentTime().toString()<<": Calculate velocity end in " <<t.elapsed()<<" milliseconds." << endl;
 
-    //ldbg <<"DWA - best parameters: ("<< bestValue << " " << fromRadiantToDegree(targetHeading) << " " << clearance << " " << velocity<<endl;
-    //ldbg <<"DWA - best cost:" <<bestCost <<endl;
+    ldbg <<"DWA - best parameters: ("<< bestValue << " " << targetHeading << " " << clearance << " " << velocity<<endl;
+    ldbg <<"DWA - best cost: " <<bestCost <<endl;
 
     return bestValue;
 }
@@ -1191,7 +1201,7 @@ void ObstacleAvoidance::applyPredictedAction(int predictedMovement)
 
 void ObstacleAvoidance::setLaser(Data::LaserData &laser)
 {
-    isLaser = true;
+    haveNewLaserData = true;
     //ldbg << "New laser coming at "<< QTime::currentTime().toString();
     actualLaser = new LaserData(laser.getTimestamp(),laser.getFOV(),laser.getResolution(), laser.getReadings());
     laserReadings.clear();
