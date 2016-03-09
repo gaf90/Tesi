@@ -27,7 +27,7 @@
   * define the number of times i need to find the same
   * pose in order to determine if the robot is stalling
   */
-#define STALL_LIMIT 10*5
+#define STALL_LIMIT 5
 
 //Tolerances
 /**

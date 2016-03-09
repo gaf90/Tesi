@@ -192,6 +192,7 @@ void ConfigReader::setOBSVariable(const QString &varName, const QString &varValu
     SET_OBS_VARIABLE(sonar_threshold);
     SET_OBS_VARIABLE(laser_threshold);
     SET_OBS_VARIABLE(obstacle_timeout);
+    SET_OBS_VARIABLE(map_renew_timeout);
 
     SET_OBS_VARIABLE(emp_angle_tolerance);
     SET_OBS_VARIABLE(emp_min_rotation);
@@ -207,6 +208,8 @@ void ConfigReader::setOBSVariable(const QString &varName, const QString &varValu
     SET_OBS_VARIABLE(dwa_min_velocity);
     SET_OBS_VARIABLE(dwa_max_velocity);
     SET_OBS_VARIABLE(dwa_step);
+    SET_OBS_VARIABLE(dwa_rotation_threshold);
+    SET_OBS_VARIABLE(dwa_translation_threshold);
     SET_OBS_VARIABLE(dwa_translation_safety);
     SET_OBS_VARIABLE(dwa_rotation_safety);
     SET_OBS_VARIABLE(dwa_pose_threshold);

@@ -102,8 +102,8 @@ void PRMAlgorithm::updatePRM(Map newMap)
     else
     {
         const PathNode* newRobotPose = newMap.lastRobotPose(Config::robotID);
-        double xRobotNew= newRobotPose->x();
-        double yRobotNew= newRobotPose->y();
+        double xRobotNew= newRobotPose->y();
+        double yRobotNew= newRobotPose->x();
 
         ldbg << "PRM: New robot pose is ("<< xRobotNew  <<", "<< yRobotNew << ")"<<endl;
 

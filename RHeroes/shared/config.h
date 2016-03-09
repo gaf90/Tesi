@@ -106,6 +106,7 @@ namespace OBS{
 
 extern int obstacle_algorithm;
 extern double obstacle_timeout;
+extern double map_renew_timeout;
 
 extern int is_test;
 
@@ -139,6 +140,8 @@ extern double dwa_max_velocity;
 extern double dwa_step;
 extern double dwa_rotation_safety;
 extern double dwa_translation_safety;
+extern double dwa_rotation_threshold;
+extern double dwa_translation_threshold;
 extern double dwa_pose_threshold;
 
 extern double dwa_sigma;

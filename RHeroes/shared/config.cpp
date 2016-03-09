@@ -107,6 +107,7 @@ double test_frontier_theta = 0;
 double sonar_threshold = 0.22;
 double laser_threshold = 0.5;
 double obstacle_timeout = 20000;
+double map_renew_timeout = 20000;
 
 int emp_angle_tolerance = 15;
 int emp_min_rotation = 5;
@@ -123,6 +124,10 @@ double dwa_time = 1;
 double dwa_min_velocity = 0;
 double dwa_max_velocity = 0.7;
 double dwa_step = 0.5;
+
+double dwa_translation_threshold = 0.3;
+double dwa_rotation_threshold = 15;
+
 double dwa_translation_safety = 0.3;
 double dwa_rotation_safety = 20;
 double dwa_pose_threshold = 0.1;

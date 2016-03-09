@@ -43,6 +43,7 @@ DeterministicSLAM::DeterministicSLAM(
         lastMeasurePose(), lastPose(), deltaOdometry(),
         skipCount(0),outdoor(false), mapLock(false),lastBackupTimestamp(0.0f),primaryIdx(0), secondaryIdx(1)
 {
+    ldbg<<"SLAM: Matcher is"<<matcher<<endl;
     switch(matcher) {
     case LiGriffithsICLSelection:
         this->matcher = new LiGriffithsICL<SemiDeterministicRetriever>;
@@ -79,14 +80,6 @@ bool DeterministicSLAM::takeAMeasure(
         firstScan = false;
         return true;
     }
-#if OVERLAP_BASED_MEASURE
-    double scanSegmentLength = 0;
-    for(int i = 0; i < retriever.querySegmentCount(); i++) {
-        scanSegmentLength += retriever.querySegment(i).length();
-    }
-    return ScanMatching::overlapAmount(
-            retriever, currentPose, associations) < .3 * scanSegmentLength;
-#else
     Q_UNUSED(retriever) Q_UNUSED(associations)
     bool spatialCheck = lastPose.getDistance(lastMeasurePose) >=
                         SLAM_MIN_SPATIAL_DISPLACEMENT;
@@ -94,7 +87,6 @@ bool DeterministicSLAM::takeAMeasure(
                         SLAM_MIN_ANGULAR_DISPLACEMENT;
 
     return spatialCheck || angularCheck;
-#endif
 }
 
 bool DeterministicSLAM::doScanMatching(double timestamp)
@@ -268,61 +260,19 @@ void DeterministicSLAM::mergeOtherSegments(const SegmentScan &s)
     }*/
 }
 
-#ifdef PERTURBATION_RETRY
-static double poseDistance(const Eigen::Vector3d &z, const Data::Pose &odoGuess)
-{
-    const Eigen::Vector3d diff = odoGuess.vectorForm() - z;
-    return SQUARE(diff[0]) + SQUARE(diff[1]) + std::abs(wrap(diff[2])) / (M_PI / 6);
-}
-#endif
-
 void DeterministicSLAM::handleScan(double timestamp, const PointScan &pscan)
 {
     doBackup(timestamp);
-    if(doScanMatching(timestamp)) {
+    if(doScanMatching(timestamp))
+    {
         SegmentScan sm(pscan, SegmentScan::SplitAndMergeInterpolation);
         SemiDeterministicRetriever dr(segments, sm, currentPose *
                 OdometryCovarianceModel::addCovariance(deltaOdometry));
 
-#ifdef PERTURBATION_RETRY
-        bool skip = false;
-#endif
-
         matcher->setRetriever(dr);
         matcher->run();
         Eigen::Vector3d z = matcher->measure();
-#ifdef PERTURBATION_RETRY
-        Eigen::Vector3d diff = currentPose.vectorForm() - z;
-        if(std::abs(wrap(diff[2])) >= M_PI / 12 || SQUARE(diff[0]) + SQUARE(diff[1]) >= 3) {
-            for(int i = 0; i < 10; i++) {
-                Rototranslation perturbation(
-                            Random::normal(0, 1 / 3.),
-                            Random::normal(0, 1 / 3.),
-                            Random::normal(0, SQUARE(M_PI / 6) / 3.));
-                dr = DeterministicRetriever(segments, sm, perturbation * currentPose);
-                matcher->setRetriever(dr);
-                matcher->run();
-                const Eigen::Vector3d &z1 = matcher->measure();
-                if(poseDistance(z1, currentPose) < poseDistance(z, currentPose)) {
-                    z = z1;
-                }
-            }
-        }
 
-        diff = currentPose.vectorForm() - z;
-        if(std::abs(wrap(diff[2])) >= M_PI / 12 || SQUARE(diff[0]) + SQUARE(diff[1]) >= 3) {
-            z = currentPose;
-            skipCount++;
-            skip = true;
-        }
-
-        if(skip && skipCount <= MAX_SKIP_COUNT) {
-            return;
-        } else {
-            skipCount = 0;
-        }
-#endif
-        Pose guess = currentPose;
         currentPose = z;
         deltaOdometry = Rototranslation();
 
@@ -331,7 +281,8 @@ void DeterministicSLAM::handleScan(double timestamp, const PointScan &pscan)
             return;
         }
 
-        if(takeAMeasure(dr, matcher->associations())) {
+        if(takeAMeasure(dr, matcher->associations()))
+        {
             SegmentScan rotoscan = Rototranslation(z) * sm;
             mergeSegments(rotoscan);
             mergeOtherSegments(rotoscan);
@@ -351,8 +302,6 @@ void DeterministicSLAM::handleScan(double timestamp, const PointScan &pscan)
             while(poseVisibilities.size()<poses.size()){
                 poseVisibilities.append(new VisibilityPolygon(rotoscan.toPolygon()));
             }
-        } else {
-            /* ? */
         }
 
         if(timestamp - lastThinningTimestamp >= SLAM_MAP_THINNING_INTERVAL) {
@@ -362,17 +311,23 @@ void DeterministicSLAM::handleScan(double timestamp, const PointScan &pscan)
 
 
         Pose p = Rototranslation(initialPose) * currentPose;
+        ldbg<<"SLAM(Scan): Pose is "<<p <<" with timestamp "<<lastPose.timestamp()<<" at "<<QTime::currentTime().toString("hh:mm:ss:zzz")<<endl;
+
         emit newRobotPose(TimedPose(lastPose.timestamp(), p));
     }
 }
 
 void DeterministicSLAM::handleOdometry(double timestamp, const Data::Pose &pose)
 {
-    if(firstScan) lastPose = TimedPose(timestamp, pose);
+    if(firstScan)
+        lastPose = TimedPose(timestamp, pose);
     deltaOdometry = deltaOdometry * Rototranslation(lastPose).inverse() * Rototranslation(pose);
     //currentPose = (Rototranslation(currentPose) * Rototranslation(lastPose).inverse() * Rototranslation(pose)).vectorForm();
     lastPose = TimedPose(timestamp, pose);
-    emit newRobotPose(TimedPose(lastPose.timestamp(), Rototranslation(initialPose) * currentPose));
+    Pose p =  Rototranslation(initialPose) * currentPose;
+    ldbg<<"SLAM(Odometry): Pose is "<<p <<" with timestamp "<<lastPose.timestamp()<<" at "<<QTime::currentTime().toString("hh:mm:ss:zzz")<<endl;
+
+    emit newRobotPose(TimedPose(lastPose.timestamp(),p));
 }
 
 void DeterministicSLAM::handleINS(const Data::INSData &ins)

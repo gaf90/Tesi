@@ -95,12 +95,10 @@ void SLAMModule::onSensorData(const Message &msg)
         const LaserData &scan = (const LaserData &) msg;
         TimedPointScan tps = {scan.getTimestamp(), new PointScan(scan)};
         scanQueue.enqueue(tps);
-
         emit scanReceived();
     } else if(typeid(msg) == typeid(const OdometryData &)) {
         const OdometryData &odo = (const OdometryData &) msg;
         odoQueue.enqueue(new OdometryData(odo));
-
         emit odometryReceived();
     } else if(typeid(msg) == typeid(const INSData &)) {
         const INSData &ins = (const INSData &) msg;

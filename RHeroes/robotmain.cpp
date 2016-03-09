@@ -176,14 +176,16 @@ int main(int argc, char *argv[])
     int victim = logger.addFileOutput(QString(PREFIX "poaretVictim_%1.log").arg(conf.id), false);
     logger.setFilenameFilter(QRegExp(".*(victimDetection).*"), victim);
 
+
     int hybridAStar = logger.addFileOutput(QString(PREFIX "poaretHybridAStar_%1.log").arg(conf.id), false);
     logger.setFilenameFilter(QRegExp(".*ybrid.*"), hybridAStar);
 
     int sonar = logger.addFileOutput(QString(PREFIX "poaretSonar_%1.log").arg(conf.id), false);
     logger.setFilenameFilter(QRegExp(".*middleware.*"), sonar);
 
+
     int robotController = logger.addFileOutput(QString(PREFIX "poaretController_%1.log").arg(conf.id), false);
-    logger.setFilenameFilter(QRegExp(".*robotcontroller.*"), robotController);
+    logger.setFilenameFilter(QRegExp(".*robotcontroller.*|.*slam.*"), robotController);
 
     int obstacle = logger.addFileOutput(QString(PREFIX "poaretObstacleController_%1.log").arg(conf.id), false);
     logger.setFilenameFilter(QRegExp(".*obstacleavoidancehandler.*"), obstacle);

@@ -107,6 +107,7 @@ void RobotState::setStall(bool stall)
     mutex->unlock();
 }
 
+
 int RobotState::getBattery() const
 {
     mutex->lock();
@@ -196,7 +197,7 @@ bool RobotState::isIdle() const
 {
     bool toRet = false;
     mutex->lock();
-    toRet = fabs(leftSpeed) < 0.05 && fabs(rightSpeed) < 0.05;
+    toRet = fabs(leftSpeed) == 0 && fabs(rightSpeed) == 0;
     mutex->unlock();
     return toRet;
 }

@@ -237,12 +237,6 @@ void ExplorationModule::onTimeout()
 
     Map newMap = slamModule->getMap();
 
-    foreach(Frontier *fn, newMap.frontiers() )
-    {
-        Point newCentroid = fn->centroid();
-        ldbg <<"Exploration: Centroid " << newCentroid << endl;
-    }
-
     ldbg << "Exploration Module: Search new frontiers." << endl;
 
     if (Config::OBS::is_test == 0)
